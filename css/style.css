@@ -1,0 +1,203 @@
+/* fonts
+font-family: 'Hind', sans-serif;
+font-family: 'Noto Serif Display', serif;
+ */
+
+ /* Colors
+ My White: #fbfbfb
+ My Black: #141414
+  */
+
+
+/* Box Model Hack */
+* {
+  box-sizing: border-box;
+}
+
+/* Clear fix hack */
+.clearfix:after {
+     content: ".";
+     display: block;
+     clear: both;
+     visibility: hidden;
+     line-height: 0;
+     height: 0;
+}
+
+.clear {
+	clear: both;
+}
+
+html {
+  font-size: 16px;
+}
+:root {
+  --base-gr: 1.61803398875;
+}
+
+/******************************************
+/* BASE STYLES
+/*******************************************/
+.grain::after {
+    animation: grain 8s steps(10) infinite;
+    background-image: url(../img/grain.png);
+    content: "";
+    height: 300%;
+    left: -50%;
+    opacity: .4;
+    mix-blend-mode: hard-light;
+    position: fixed;
+    top: -100%;
+    width: 300%;
+}
+.lottie-bg {
+  position: absolute;
+  z-index: -1;
+  max-height: 100vh;
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin: auto;
+  overflow: hidden
+}
+
+lottie-player {
+  height: 100%;
+  object-fit: contain;
+}
+
+body {
+  margin: 0;
+  font-family: 'Hind', sans-serif;
+  background-color: #fbfbfb;
+  color: #141414;
+}
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 50px;
+}
+
+/******************************************
+/* LAYOUT
+/*******************************************/
+header {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  justify-items: center;
+  align-items: center;
+  opacity: 0;
+  animation: fadeIn 2s ease 6s forwards;
+}
+
+footer {
+
+}
+
+/******************************************
+/* ADDITIONAL STYLES
+/*******************************************/
+
+.social-icons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2em;
+}
+.social-icons > img {
+  min-width: 2rem;
+}
+.my-logo {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #141414;
+  background-color: #141414;
+  border-radius: 2px;
+}
+header > ul {
+  display: flex;
+  list-style: none;
+  gap: 1em;
+  padding: 0;
+}
+
+ h1 {
+  font-family: 'Major Mono Display';
+  font-size: clamp(calc(1rem * var(--base-gr)  * var(--base-gr)), 7.5vw, calc(1rem * var(--base-gr) * var(--base-gr) * var(--base-gr) * var(--base-gr)));
+  text-align: center;
+  position: relative;
+  margin: 50px 0;
+}
+
+h1::before,
+h1::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+h1::before {
+background: #fbfbfb;
+animation: typer 1.5s steps(12) 4.5s forwards;
+}
+
+h1::after {
+  width: 0.125em;
+  background: #141414;
+  animation: typer 1.5s steps(12) 4.5s forwards, blink 800ms steps(12) infinite;
+}
+
+main > p {
+  margin: 0;
+  font-size: clamp(calc(1rem * var(--base-gr)), 7.5vw, calc(1rem * var(--base-gr) * var(--base-gr)));
+  text-align: center;
+  opacity: 0;
+  transform: translateY(3rem);
+  animation: fadeIn 2s ease 6s forwards;
+}
+
+main > img {
+  width: 18vw;
+  height: 18vw;
+  min-width: 125px;
+  min-height: 125px;
+  object-fit: cover;
+  border-radius: 5px;
+  border: 1px solid #fbfbfb;
+  opacity: 0;
+  transform: translateY(-3rem);
+  animation: fadeIn 2s ease 6s forwards;
+}
+
+@keyframes typer {
+  to {
+    left: 100%;
+  }
+}
+@keyframes blink {
+  to {
+    background: #fbfbfb;
+  }
+}
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes grain {
+  0%, 100% { transform:translate(0, 0) }
+  10% { transform:translate(-5%, -10%) }
+  20% { transform:translate(-15%, 5%) }
+  30% { transform:translate(7%, -25%) }
+  40% { transform:translate(-5%, 25%) }
+  50% { transform:translate(-15%, 10%) }
+  60% { transform:translate(15%, 0%) }
+  70% { transform:translate(0%, 15%) }
+  80% { transform:translate(3%, 35%) }
+  90% { transform:translate(-10%, 10%) }
+}
