@@ -3,11 +3,10 @@ font-family: 'Hind', sans-serif;
 font-family: 'Noto Serif Display', serif;
  */
 
- /* Colors
+/* Colors
  My White: #fbfbfb
  My Black: #141414
   */
-
 
 /* Box Model Hack */
 * {
@@ -16,16 +15,16 @@ font-family: 'Noto Serif Display', serif;
 
 /* Clear fix hack */
 .clearfix:after {
-     content: ".";
-     display: block;
-     clear: both;
-     visibility: hidden;
-     line-height: 0;
-     height: 0;
+  content: '.';
+  display: block;
+  clear: both;
+  visibility: hidden;
+  line-height: 0;
+  height: 0;
 }
 
 .clear {
-	clear: both;
+  clear: both;
 }
 
 html {
@@ -39,16 +38,16 @@ html {
 /* BASE STYLES
 /*******************************************/
 .grain::after {
-    animation: grain 8s steps(10) infinite;
-    background-image: url(../img/grain.png);
-    content: "";
-    height: 300%;
-    left: -50%;
-    opacity: .4;
-    mix-blend-mode: hard-light;
-    position: fixed;
-    top: -100%;
-    width: 300%;
+  animation: grain 8s steps(10) infinite;
+  background-image: url(../img/grain.png);
+  content: '';
+  height: 300%;
+  left: -50%;
+  opacity: 0.4;
+  mix-blend-mode: hard-light;
+  position: fixed;
+  top: -100%;
+  width: 300%;
 }
 .lottie-bg {
   position: absolute;
@@ -58,7 +57,7 @@ html {
   right: 0;
   margin-left: auto;
   margin: auto;
-  overflow: hidden
+  overflow: hidden;
 }
 
 lottie-player {
@@ -93,7 +92,6 @@ header {
 }
 
 footer {
-
 }
 
 /******************************************
@@ -123,9 +121,15 @@ header > ul {
   padding: 0;
 }
 
- h1 {
+h1 {
   font-family: 'Major Mono Display';
-  font-size: clamp(calc(1rem * var(--base-gr)  * var(--base-gr)), 7.5vw, calc(1rem * var(--base-gr) * var(--base-gr) * var(--base-gr) * var(--base-gr)));
+  font-size: clamp(
+    calc(1rem * var(--base-gr) * var(--base-gr)),
+    7.5vw,
+    calc(
+      1rem * var(--base-gr) * var(--base-gr) * var(--base-gr) * var(--base-gr)
+    )
+  );
   text-align: center;
   position: relative;
   margin: 50px 0;
@@ -133,7 +137,7 @@ header > ul {
 
 h1::before,
 h1::after {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   right: 0;
@@ -141,8 +145,8 @@ h1::after {
   left: 0;
 }
 h1::before {
-background: #fbfbfb;
-animation: typer 1.5s steps(12) 4.5s forwards;
+  background: #fbfbfb;
+  animation: typer 1.5s steps(12) 4.5s forwards;
 }
 
 h1::after {
@@ -153,7 +157,11 @@ h1::after {
 
 main > p {
   margin: 0;
-  font-size: clamp(calc(1rem * var(--base-gr)), 7.5vw, calc(1rem * var(--base-gr) * var(--base-gr)));
+  font-size: clamp(
+    calc(1rem * var(--base-gr)),
+    7.5vw,
+    calc(1rem * var(--base-gr) * var(--base-gr))
+  );
   text-align: center;
   opacity: 0;
   transform: translateY(3rem);
@@ -171,6 +179,7 @@ main > img {
   opacity: 0;
   transform: translateY(-3rem);
   animation: fadeIn 2s ease 6s forwards;
+  z-index: 1;
 }
 
 @keyframes typer {
@@ -190,14 +199,35 @@ main > img {
   }
 }
 @keyframes grain {
-  0%, 100% { transform:translate(0, 0) }
-  10% { transform:translate(-5%, -10%) }
-  20% { transform:translate(-15%, 5%) }
-  30% { transform:translate(7%, -25%) }
-  40% { transform:translate(-5%, 25%) }
-  50% { transform:translate(-15%, 10%) }
-  60% { transform:translate(15%, 0%) }
-  70% { transform:translate(0%, 15%) }
-  80% { transform:translate(3%, 35%) }
-  90% { transform:translate(-10%, 10%) }
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  10% {
+    transform: translate(-5%, -10%);
+  }
+  20% {
+    transform: translate(-15%, 5%);
+  }
+  30% {
+    transform: translate(7%, -25%);
+  }
+  40% {
+    transform: translate(-5%, 25%);
+  }
+  50% {
+    transform: translate(-15%, 10%);
+  }
+  60% {
+    transform: translate(15%, 0%);
+  }
+  70% {
+    transform: translate(0%, 15%);
+  }
+  80% {
+    transform: translate(3%, 35%);
+  }
+  90% {
+    transform: translate(-10%, 10%);
+  }
 }
