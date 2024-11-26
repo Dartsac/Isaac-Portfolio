@@ -30,6 +30,7 @@ font-family: 'Noto Serif Display', serif;
 html {
   font-size: 16px;
 }
+
 :root {
   --base-gr: 1.61803398875;
 }
@@ -49,6 +50,7 @@ html {
   top: -100%;
   width: 300%;
 }
+
 .lottie-bg {
   position: absolute;
   z-index: -1;
@@ -71,6 +73,7 @@ body {
   background-color: #fbfbfb;
   color: #141414;
 }
+
 main {
   display: flex;
   flex-direction: column;
@@ -91,8 +94,7 @@ header {
   animation: fadeIn 2s ease 6s forwards;
 }
 
-footer {
-}
+footer {}
 
 /******************************************
 /* ADDITIONAL STYLES
@@ -104,9 +106,11 @@ footer {
   align-items: center;
   gap: 2em;
 }
-.social-icons > img {
+
+.social-icons>img {
   min-width: 2rem;
 }
+
 .my-logo {
   width: 40px;
   height: 40px;
@@ -114,7 +118,8 @@ footer {
   background-color: #141414;
   border-radius: 2px;
 }
-header > ul {
+
+header>ul {
   display: flex;
   list-style: none;
   gap: 1em;
@@ -123,13 +128,9 @@ header > ul {
 
 h1 {
   font-family: 'Major Mono Display';
-  font-size: clamp(
-    calc(1rem * var(--base-gr) * var(--base-gr)),
-    7.5vw,
-    calc(
-      1rem * var(--base-gr) * var(--base-gr) * var(--base-gr) * var(--base-gr)
-    )
-  );
+  font-size: clamp(calc(1rem * var(--base-gr) * var(--base-gr)),
+      7.5vw,
+      calc(1rem * var(--base-gr) * var(--base-gr) * var(--base-gr) * var(--base-gr)));
   text-align: center;
   position: relative;
   margin: 50px 0;
@@ -144,6 +145,7 @@ h1::after {
   bottom: 0;
   left: 0;
 }
+
 h1::before {
   background: #fbfbfb;
   animation: typer 1.5s steps(12) 4.5s forwards;
@@ -152,23 +154,23 @@ h1::before {
 h1::after {
   width: 0.125em;
   background: #141414;
-  animation: typer 1.5s steps(12) 4.5s forwards, blink 800ms steps(12) infinite;
+  animation:
+    typer 1.5s steps(12) 4.5s forwards,
+    blink 800ms steps(12) infinite;
 }
 
-main > p {
+main>p {
   margin: 0;
-  font-size: clamp(
-    calc(1rem * var(--base-gr)),
-    7.5vw,
-    calc(1rem * var(--base-gr) * var(--base-gr))
-  );
+  font-size: clamp(calc(1rem * var(--base-gr)),
+      7.5vw,
+      calc(1rem * var(--base-gr) * var(--base-gr)));
   text-align: center;
   opacity: 0;
   transform: translateY(3rem);
   animation: fadeIn 2s ease 6s forwards;
 }
 
-main > img {
+main>img {
   width: 18vw;
   height: 18vw;
   min-width: 125px;
@@ -187,46 +189,59 @@ main > img {
     left: 100%;
   }
 }
+
 @keyframes blink {
   to {
     background: #fbfbfb;
   }
 }
+
 @keyframes fadeIn {
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
+
 @keyframes grain {
+
   0%,
   100% {
     transform: translate(0, 0);
   }
+
   10% {
     transform: translate(-5%, -10%);
   }
+
   20% {
     transform: translate(-15%, 5%);
   }
+
   30% {
     transform: translate(7%, -25%);
   }
+
   40% {
     transform: translate(-5%, 25%);
   }
+
   50% {
     transform: translate(-15%, 10%);
   }
+
   60% {
     transform: translate(15%, 0%);
   }
+
   70% {
     transform: translate(0%, 15%);
   }
+
   80% {
     transform: translate(3%, 35%);
   }
+
   90% {
     transform: translate(-10%, 10%);
   }
