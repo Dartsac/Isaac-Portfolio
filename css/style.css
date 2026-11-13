@@ -246,3 +246,43 @@ main>img {
     transform: translate(-10%, 10%);
   }
 }
+
+/* Initially hide the title */
+.title {
+  position: relative;
+  overflow: hidden; /* Ensures the typewriter effect doesn't overflow */
+  white-space: nowrap; /* Prevents text from wrapping */
+  opacity: 0; /* Hidden initially */
+  animation: none; /* Default, no animation */
+  transition: opacity 0.5s ease-in-out; /* Smoothly fade in */
+}
+
+.title.typewriter::before {
+  content: '';
+  background: #fbfbfb;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  animation: typer 1.5s steps(12) forwards;
+}
+
+.title.typewriter::after {
+  content: '';
+  position: absolute;
+  width: 0.125em;
+  height: 100%;
+  background: #141414;
+  animation: typer 1.5s steps(12) forwards, blink 800ms steps(12) infinite;
+}
+
+/* Ensure grain effect is hidden initially */
+.grain {
+  display: none; /* Hidden initially */
+}
+
+.grain.show-grain {
+  display: block;
+  animation: grain 8s steps(10) infinite;
+}
