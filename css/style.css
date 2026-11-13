@@ -249,6 +249,16 @@ a:focus-visible {
   font-size: 0.85rem;
 }
 
+/* Hidden visually but still read by screen readers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 /* A classic push button: rounded rectangle with a hard drop shadow. */
 .button {
   display: inline-block;
@@ -267,19 +277,155 @@ a:focus-visible {
 }
 
 /******************************************
+/* TIME MACHINE
+/* A framed 1-bit image with its full-color source behind it. The full-color
+/* image shows through a lens that follows a mouse or pen, or fills the frame
+/* while its Full color toggle is pressed (or the image is clicked or tapped).
+/*******************************************/
+.time-machine {
+  --lens-radius: 3.5rem;
+  --ease-lens: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-reveal: cubic-bezier(0.4, 0, 0.2, 1);
+  --lens-x: 50%;
+  --lens-y: 50%;
+  position: relative;
+  width: fit-content;
+  max-width: calc(100% - var(--rule));
+  border: var(--rule) solid var(--ink);
+  box-shadow: var(--rule) var(--rule) 0 var(--ink);
+  overflow: hidden;
+  /* Keeps the toggle's z-index inside the frame, so it can't rise above the page's sticky title bar. */
+  isolation: isolate;
+}
+
+.time-machine__one-bit {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+}
+
+/* How far the full-color image is revealed around the lens. Registered so it can
+/* animate on its own: the reveal grows and shrinks smoothly while the lens position
+/* never animates, so the lens keeps up with the pointer. */
+@property --reveal {
+  syntax: '<length-percentage>';
+  inherits: false;
+  initial-value: 0px;
+}
+
+.time-machine__full-color {
+  --reveal: 0px;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  clip-path: circle(var(--reveal) at var(--lens-x) var(--lens-y));
+  pointer-events: none;
+  transition: --reveal 0.3s var(--ease-lens);
+}
+
+.time-machine--lensing .time-machine__full-color {
+  --reveal: var(--lens-radius);
+}
+
+/* 150% of the reference radius reaches every corner from anywhere in the image. */
+.time-machine--full-color .time-machine__full-color {
+  --reveal: 150%;
+  transition: --reveal 0.9s var(--ease-reveal);
+}
+
+/* The lens rim: black with white edges so it shows on light and dark images. */
+.time-machine::after {
+  content: '';
+  position: absolute;
+  left: var(--lens-x);
+  top: var(--lens-y);
+  width: calc(2 * var(--lens-radius));
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border: var(--rule) solid var(--ink);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 1px var(--paper),
+    inset 0 0 0 1px var(--paper);
+  pointer-events: none;
+  opacity: 0;
+  scale: 0.5;
+  transition:
+    opacity 0.2s ease-out,
+    scale 0.3s var(--ease-lens);
+}
+
+.time-machine--lensing::after {
+  opacity: 1;
+  scale: 1;
+}
+
+/* When the whole full-color image shows, the rim sweeps outward with the reveal and fades. */
+.time-machine--full-color::after {
+  opacity: 0;
+  scale: 4;
+  transition:
+    opacity 0.6s ease-out,
+    scale 0.9s var(--ease-reveal);
+}
+
+@media (pointer: fine) {
+  .time-machine {
+    cursor: url('../svg/cursor-time-machine.svg') 12 12, crosshair;
+  }
+}
+
+/* Above the full-color image and the lens rim, which come before or after it. */
+.time-machine__toggle {
+  position: absolute;
+  z-index: 1;
+  right: 0.25rem;
+  bottom: 0.25rem;
+  padding: 0 0.35rem;
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: 0.3rem;
+  box-shadow: 1px 1px 0 var(--ink);
+  font: 700 0.65rem/1.4 var(--font-display);
+  cursor: pointer;
+}
+
+.time-machine__toggle[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.time-machine__toggle:focus-visible {
+  outline: var(--rule) solid var(--ink);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px var(--paper);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .time-machine__full-color,
+  .time-machine--full-color .time-machine__full-color,
+  .time-machine::after,
+  .time-machine--full-color::after {
+    transition: none;
+  }
+}
+
+/******************************************
 /* ABOUT
 /*******************************************/
 .about__summary {
   display: flow-root;
 }
 
-/* A 1-bit dithered portrait, drawn pixel for pixel like a compact Mac screen. */
+/* A 1-bit dithered portrait with its full-color source in the Time Machine. */
 .about__headshot {
+  --lens-radius: 2.5rem;
   float: left;
   margin: 0.25rem 1.25rem 0.75rem 0;
-  border: var(--rule) solid var(--ink);
-  box-shadow: var(--rule) var(--rule) 0 var(--ink);
-  image-rendering: pixelated;
 }
 
 .about__facts {
@@ -287,6 +433,157 @@ a:focus-visible {
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: 1.5rem;
   margin-top: 1.5rem;
+}
+
+/******************************************
+/* PROJECTS
+/* Each project is a framed panel: title and year, technologies,
+/* description, then any visuals and links it has.
+/*******************************************/
+.project {
+  margin-top: 1.5rem;
+  padding: 1rem clamp(0.75rem, 4%, 1.5rem) 1.25rem;
+  border: var(--rule) solid var(--ink);
+  box-shadow: var(--rule) var(--rule) 0 var(--ink);
+}
+
+.project__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.project__title {
+  flex: 1 1 14rem;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+
+.section .project__year,
+.section .project__kind {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+}
+
+/* Marks a project written up as a Case Study. */
+.section .project__kind {
+  flex-basis: 100%;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.project__technologies {
+  margin-bottom: 1rem;
+}
+
+.project .labelled-group {
+  margin: 1.25rem 0;
+}
+
+.section .project__note,
+.section .project__caption {
+  font-size: 0.85rem;
+}
+
+.section .project__note {
+  margin: 0;
+  font-style: italic;
+}
+
+.section .project__caption {
+  margin-top: 0.6rem;
+}
+
+.section .project__links {
+  margin: 0;
+}
+
+.project__link {
+  font-weight: 700;
+}
+
+/* 1-bit visuals, at most 400 pixels wide, framed like the headshot, with room for the frame's shadow. */
+.project__visual {
+  max-width: calc(400px + 3 * var(--rule));
+  margin: 0 0 1rem;
+}
+
+.art-inputs {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.art-inputs .time-machine {
+  min-width: 0;
+}
+
+/* Numbered steps joined by a rule, read top to bottom. */
+.flow-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: flow-step;
+}
+
+.flow-list__item {
+  position: relative;
+  padding: 0.35rem 0.75rem 0.35rem 2.5rem;
+  border: 1px solid var(--ink);
+  counter-increment: flow-step;
+}
+
+.flow-list__item::before {
+  content: counter(flow-step);
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 1.75rem;
+  display: grid;
+  place-items: center;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.flow-list__item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: calc(0.875rem - 1px);
+  top: 100%;
+  height: calc(0.75rem + 1px);
+  border-left: var(--rule) solid var(--ink);
+}
+
+.outcome-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.outcome-list__item {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--ink);
+  box-shadow: 1px 1px 0 var(--ink);
+}
+
+.outcome-list__figure {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  line-height: 1.2;
 }
 
 /******************************************

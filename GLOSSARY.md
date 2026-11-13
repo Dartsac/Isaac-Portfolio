@@ -24,6 +24,10 @@ _Avoid_: Navbar, header
 One of the portfolio's major content areas: About, Projects, Technologies, or Contact.
 _Avoid_: Page, tab
 
+**Time Machine**:
+The lens and Full color toggle that reveal the full-color source behind a 1-bit image. Images in one project figure can change together as a group.
+_Avoid_: Hover effect, color mode, original (which means "not Apple-owned" elsewhere)
+
 **Easter Egg**:
 The hidden About This Mac window that describes Isaac with playful computer-style specs.
 _Avoid_: Secret page

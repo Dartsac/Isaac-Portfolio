@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { section, group } = require('./support/portfolio')
+const { section, group, loadedImage } = require('./support/portfolio')
 
 test.describe('About Section', () => {
   test.beforeEach(async ({ page }) => {
@@ -8,13 +8,13 @@ test.describe('About Section', () => {
   })
 
   test('shows Isaac’s headshot', async ({ page }) => {
-    const headshotLoaded = page.waitForResponse(
-      (response) => response.request().resourceType() === 'image' && /headshot/.test(response.url()),
-    )
-    await page.reload()
+    const headshot = section(page, 'About').getByRole('img', { name: 'Isaac Dobson', exact: true })
 
-    await expect(section(page, 'About').getByRole('img', { name: 'Isaac Dobson', exact: true })).toBeVisible()
-    expect((await headshotLoaded).ok()).toBe(true)
+    await expect(headshot).toBeVisible()
+    await loadedImage(headshot)
+    expect(await headshot.evaluate((img) => /** @type {HTMLImageElement} */ (img).currentSrc)).toMatch(
+      /\/img\/headshot-1bit(@2x)?\.png$/,
+    )
   })
 
   test('summarizes his AT&T data and platform focus', async ({ page }) => {
