@@ -1,14 +1,15 @@
 {
   "name": "isaac-portfolio",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Isaac Dobson's classic-Macintosh portfolio: a static HTML, CSS, and JavaScript site.",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node scripts/serve.mjs",
+    "test": "playwright test"
   },
-  "author": "",
+  "author": "Isaac Dobson",
   "license": "ISC",
-  "dependencies": {
-    "live-server": "^1.2.2"
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
   }
 }

@@ -2,69 +2,80 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="description" content="Your description goes here" />
-    <meta name="keywords" content="one, two, three" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Hind:wght@300;400;500;600;700&family=Major+Mono+Display&display=swap"
-      rel="stylesheet"
+    <title>Isaac Dobson | Software Engineer — Data &amp; Platform</title>
+    <meta
+      name="description"
+      content="Isaac Dobson is a software engineer focused on data and platform work. Explore his projects, technologies, and contact details."
     />
-    <title>Isaac Dobson Portfolio</title>
+    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#ffffff" />
 
-    <!-- external CSS link -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Isaac Dobson" />
+    <meta property="og:title" content="Isaac Dobson | Software Engineer — Data &amp; Platform" />
+    <meta
+      property="og:description"
+      content="Isaac Dobson is a software engineer focused on data and platform work. Explore his projects, technologies, and contact details."
+    />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Isaac Dobson | Software Engineer — Data &amp; Platform" />
+    <meta
+      name="twitter:description"
+      content="Isaac Dobson is a software engineer focused on data and platform work. Explore his projects, technologies, and contact details."
+    />
+
     <link rel="stylesheet" href="css/normalize.css" />
     <link rel="stylesheet" href="css/style.css" />
   </head>
 
   <body>
-    <div class="lottie-bg">
-      <lottie-player
-        class="apple-animation"
-        src="https://assets9.lottiefiles.com/packages/lf20_jpsi2mle.json"
-        background="transparent"
-        speed="1"
-        autoplay
-      ></lottie-player>
-    </div>
-    <header>
-      <div class="social-icons">
-        <img src="svg/logo-github.svg" alt="github" />
-        <img src="svg/logo-linkedin.svg" alt="linkedin" />
-        <img src="svg/logo-twitter.svg" alt="twitter" />
+    <div class="macintosh">
+      <div class="macintosh__bezel">
+        <div class="macintosh__screen">
+          <div class="mac-window">
+            <div class="mac-window__title-bar" aria-hidden="true">
+              <span class="mac-window__close-box"></span>
+              <span class="mac-window__title">Isaac Dobson</span>
+            </div>
+            <main class="mac-window__content">
+              <header class="ready-title">
+                <h1 class="ready-title__name">Isaac Dobson</h1>
+                <p class="ready-title__headline">Software Engineer — Data &amp; Platform</p>
+              </header>
+
+              <section id="about" class="section" aria-labelledby="about-title">
+                <h2 id="about-title" class="section__title">About</h2>
+                <p>
+                  Isaac is a software engineer who builds data and platform tooling, with a Computer
+                  Science degree from Georgia Tech.
+                </p>
+              </section>
+
+              <section id="projects" class="section" aria-labelledby="projects-title">
+                <h2 id="projects-title" class="section__title">Projects</h2>
+                <p>Selected work, from data-platform automation to personal projects.</p>
+              </section>
+
+              <section id="technologies" class="section" aria-labelledby="technologies-title">
+                <h2 id="technologies-title" class="section__title">Technologies</h2>
+                <p>The languages, frameworks, and platforms Isaac works with.</p>
+              </section>
+
+              <section id="contact" class="section" aria-labelledby="contact-title">
+                <h2 id="contact-title" class="section__title">Contact</h2>
+                <ul class="contact-list">
+                  <li><a href="mailto:isaacdobson@me.com">isaacdobson@me.com</a></li>
+                  <li><a href="https://github.com/Dartsac">GitHub</a></li>
+                </ul>
+              </section>
+            </main>
+          </div>
+        </div>
       </div>
-      <div class="my-logo"></div>
-
-      <ul>
-        <li>About</li>
-        <li>Projects</li>
-        <li>Technologies</li>
-      </ul>
-    </header>
-    <main>
-      <img class="profile-pic" src="img/headshot.png" alt="headshot" />
-      <h1 class="title">Isaac Dobson</h1>
-      <div class="grain"></div>
-      <p>Your Next Full-Stack Engineer</p>
-    </main>
-    <div id="lottie-container"></div>
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.7.8/lottie.min.js"></script>
-    <script>
-      var animation = bodymovin.loadAnimation({
-        container: document.getElementById('lottie-container'),
-        renderer: 'svg',
-        loop: false,
-        autoplay: true,
-        src: 'https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js',
-      })
-
-      animation.addEventListener('complete', function () {
-        var container = document.getElementById('lottie-container')
-        container.parentNode.removeChild(container)
-      })
-    </script>
-    <script type="text/javascript" src="js/main.js"></script>
+      <div class="macintosh__chin" aria-hidden="true">
+        <span class="macintosh__floppy-slot"></span>
+      </div>
+    </div>
   </body>
 </html>
