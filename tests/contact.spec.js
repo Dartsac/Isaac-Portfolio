@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { PHONE_NUMBER, section, pdfText } = require('./support/portfolio')
+const { PHONE_NUMBER, section, pdfText, tabToNext } = require('./support/portfolio')
 
 const PUBLIC_RESUME = {
   linkName: 'Download Public Resume (PDF)',
@@ -37,7 +37,7 @@ test.describe('Contact Section', () => {
 
     await contact.getByRole('link', { name: first, exact: true }).focus()
     for (const name of rest) {
-      await page.keyboard.press('Tab')
+      await tabToNext(page)
       await expect(contact.getByRole('link', { name, exact: true })).toBeFocused()
     }
   })

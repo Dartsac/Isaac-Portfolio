@@ -27,6 +27,7 @@
 
     <link rel="stylesheet" href="css/normalize.css" />
     <link rel="stylesheet" href="css/style.css" />
+    <script src="js/menu-bar.js" defer></script>
     <script src="js/time-machine.js" defer></script>
   </head>
 
@@ -34,8 +35,16 @@
     <div class="macintosh">
       <div class="macintosh__bezel">
         <div class="macintosh__screen">
+          <nav class="menu-bar" aria-label="Menu Bar">
+            <ul class="menu-bar__titles">
+              <li><a class="menu-bar__title" href="#about">About</a></li>
+              <li><a class="menu-bar__title" href="#projects">Projects</a></li>
+              <li><a class="menu-bar__title" href="#technologies">Technologies</a></li>
+              <li><a class="menu-bar__title" href="#contact">Contact</a></li>
+            </ul>
+          </nav>
           <div class="mac-window">
-            <div class="mac-window__title-bar" aria-hidden="true">
+            <div class="mac-window__title-bar" aria-hidden="true" data-testid="mac-window-title-bar">
               <span class="mac-window__close-box"></span>
               <span class="mac-window__title">Isaac Dobson</span>
             </div>
@@ -45,7 +54,7 @@
                 <p class="ready-title__headline">Software Engineer — Data &amp; Platform</p>
               </header>
 
-              <section id="about" class="section" aria-labelledby="about-title">
+              <section id="about" class="section" tabindex="-1" aria-labelledby="about-title">
                 <h2 id="about-title" class="section__title">About</h2>
                 <div class="about__summary">
                   <div class="time-machine about__headshot">
@@ -117,7 +126,7 @@
                 </div>
               </section>
 
-              <section id="projects" class="section" aria-labelledby="projects-title">
+              <section id="projects" class="section" tabindex="-1" aria-labelledby="projects-title">
                 <h2 id="projects-title" class="section__title">Projects</h2>
                 <p>Selected work, from data-platform automation to personal projects.</p>
 
@@ -374,7 +383,7 @@
                 </article>
               </section>
 
-              <section id="technologies" class="section" aria-labelledby="technologies-title">
+              <section id="technologies" class="section" tabindex="-1" aria-labelledby="technologies-title">
                 <h2 id="technologies-title" class="section__title">Technologies</h2>
                 <p>The languages, data platforms, and tools from Isaac’s resume.</p>
                 <div class="technologies__groups">
@@ -415,7 +424,7 @@
                 </div>
               </section>
 
-              <section id="contact" class="section" aria-labelledby="contact-title">
+              <section id="contact" class="section" tabindex="-1" aria-labelledby="contact-title">
                 <h2 id="contact-title" class="section__title">Contact</h2>
                 <p>
                   Email Isaac, find him on these profiles, or download his Public Resume.

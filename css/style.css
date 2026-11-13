@@ -8,6 +8,14 @@
   --rule: 2px;
   --font-display: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
   --font-body: Verdana, 'DejaVu Sans', 'Bitstream Vera Sans', sans-serif;
+  /* Menu titles shrink with the Macintosh screen they sit in, so all of them fit across it: a short
+  /* desktop window draws a small Macintosh, and on a phone the screen is the phone's own. (The cqw unit
+  /* is a hundredth of that screen's width, or of the phone's, where the Macintosh steps aside.) */
+  --menu-bar-font-size: clamp(0.625rem, 3.7cqw, 0.85rem);
+  --menu-title-padding-block: 0.35rem;
+  /* One line of menu titles and their padding, plus the Menu Bar's bottom rule. */
+  --menu-bar-height: calc(var(--menu-bar-font-size) + 2 * var(--menu-title-padding-block) + var(--rule));
+  --title-bar-height: 1.5rem;
   /* 50% checkerboard dither used for the desktop and decorative fills. */
   --dither: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='2' height='2' fill='%23fff'/%3E%3Cpath d='M0 0h1v1H0zM1 1h1v1H1z'/%3E%3C/svg%3E")
     0 0 / 2px 2px;
@@ -65,11 +73,13 @@ body {
   flex: 1;
   min-height: 0;
   display: flex;
-  padding: 3%;
+  flex-direction: column;
   background: var(--dither);
   border: var(--rule) solid var(--ink);
   border-radius: 1rem / 1.25rem;
   overflow: hidden;
+  /* The Menu Bar sizes its menu titles from this screen's width. */
+  container-type: inline-size;
 }
 
 .macintosh__chin {
@@ -88,11 +98,74 @@ body {
 }
 
 /******************************************
+/* MENU BAR
+/* The classic menu strip across the top of the screen. Each menu title moves
+/* visitors to a Section; the title of the Section being read is shown
+/* selected (inverted).
+/*******************************************/
+.menu-bar {
+  flex: none;
+  position: relative;
+  z-index: 2;
+  height: var(--menu-bar-height);
+  background: var(--paper);
+  border-bottom: var(--rule) solid var(--ink);
+  font-family: var(--font-display);
+  font-size: var(--menu-bar-font-size);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.menu-bar__titles {
+  display: flex;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0 min(0.5rem, 2cqw);
+  list-style: none;
+  /* A screen too narrow for even the smallest menu titles scrolls them sideways rather than wrap them. */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.menu-bar__title {
+  display: block;
+  padding: var(--menu-title-padding-block) min(0.6rem, 2cqw);
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+/* Menu titles don't invert on hover like other links: inverted means the current Section. */
+.menu-bar__title:hover {
+  background: none;
+  color: var(--ink);
+}
+
+/* Touch screens leave a tapped title hovered, so only a hovering pointer underlines it. */
+@media (hover: hover) {
+  .menu-bar__title:hover {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+  }
+}
+
+.menu-bar__title[aria-current='location'] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.menu-bar__title:focus-visible {
+  outline: var(--rule) solid var(--ink);
+  outline-offset: calc(-2 * var(--rule));
+  box-shadow: inset 0 0 0 calc(2 * var(--rule)) var(--paper);
+}
+
+/******************************************
 /* MAC WINDOW
 /*******************************************/
 .mac-window {
   flex: 1;
   min-height: 0;
+  margin: 3%;
   display: flex;
   flex-direction: column;
   background: var(--paper);
@@ -106,7 +179,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 1.5rem;
+  height: var(--title-bar-height);
   border-bottom: var(--rule) solid var(--ink);
   /* Classic striped title bar: alternating 1px rules, with 3px plain bands top and bottom. */
   background:
@@ -142,6 +215,16 @@ body {
   padding: 2rem clamp(1rem, 5%, 3rem) 3rem;
 }
 
+/* Moving to a Section from the Menu Bar glides there, so visitors see where they went. The Menu Bar's
+/* script turns gliding on only for that move: a link straight to a Section opens right at it.
+/* (The Mac Window scrolls on large screens, the page on phones.) */
+@media (prefers-reduced-motion: no-preference) {
+  html.gliding-to-section,
+  .gliding-to-section .mac-window__content {
+    scroll-behavior: smooth;
+  }
+}
+
 /******************************************
 /* READY-STATE TITLE
 /*******************************************/
@@ -169,6 +252,18 @@ body {
 /*******************************************/
 .section {
   padding: 2rem 0 1rem;
+}
+
+/* The last Section is at least as tall as the Mac Window's visible content, so moving to it brings it
+/* to the top like any other Section, and reading on to the end marks it as the Section being read. */
+.section:last-child {
+  min-height: 100%;
+}
+
+/* A Section takes focus when the Menu Bar moves a visitor to it, so keyboard and screen-reader
+/* visitors continue from there. It isn't a control, so it shows no focus ring. */
+.section:focus {
+  outline: none;
 }
 
 .section__title {
@@ -617,13 +712,22 @@ a:focus-visible {
 
 /******************************************
 /* SMALL SCREENS
-/* The Mac Window fills the viewport; the computer frame steps aside.
+/* The Mac Window fills the viewport; the computer frame steps aside. The page
+/* itself scrolls, for natural touch scrolling, under the Menu Bar and the Mac
+/* Window's title bar, which stay stuck to the top of the screen.
 /*******************************************/
 @media (max-width: 40rem), (max-height: 32rem) {
   body {
     display: block;
+    /* Block layout honors alignment too: stretch the Menu Bar and Mac Window across the screen. */
+    place-items: normal;
     padding: 0;
     background: var(--paper);
+  }
+
+  .menu-bar {
+    position: sticky;
+    top: 0;
   }
 
   .macintosh,
@@ -637,19 +741,30 @@ a:focus-visible {
   }
 
   .mac-window {
-    min-height: 100vh;
-    min-height: 100dvh;
+    min-height: calc(100vh - var(--menu-bar-height));
+    min-height: calc(100dvh - var(--menu-bar-height));
+    margin: 0;
     border: 0;
     box-shadow: none;
   }
 
   .mac-window__title-bar {
     position: sticky;
-    top: 0;
+    top: var(--menu-bar-height);
     z-index: 1;
   }
 
   .mac-window__content {
     overflow: visible;
+  }
+
+  /* Moving to a Section stops with its heading just below the stuck Menu Bar and title bar. */
+  .section {
+    scroll-margin-top: calc(var(--menu-bar-height) + var(--title-bar-height));
+  }
+
+  .section:last-child {
+    min-height: calc(100vh - var(--menu-bar-height) - var(--title-bar-height));
+    min-height: calc(100dvh - var(--menu-bar-height) - var(--title-bar-height));
   }
 }

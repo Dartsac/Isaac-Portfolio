@@ -14,7 +14,11 @@ module.exports = defineConfig({
     baseURL,
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // Chromium for Chrome and Edge, and WebKit for Safari, which every iPhone visitor uses.
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+  ],
   webServer: {
     command: 'node scripts/serve.mjs',
     url: baseURL,

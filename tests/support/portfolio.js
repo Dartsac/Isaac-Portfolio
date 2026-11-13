@@ -15,6 +15,60 @@ function section(page, name) {
 }
 
 /**
+ * Finds a Section's heading, the title it is announced and shown by.
+ * @param {import('@playwright/test').Page} page
+ * @param {string} name About, Projects, Technologies, or Contact
+ */
+function sectionHeading(page, name) {
+  return section(page, name).getByRole('heading', { level: 2, name, exact: true })
+}
+
+/**
+ * Finds the persistent Menu Bar.
+ * @param {import('@playwright/test').Page} page
+ */
+function menuBar(page) {
+  return page.getByRole('navigation', { name: 'Menu Bar' })
+}
+
+/**
+ * Finds the Menu Bar's menu title for a Section.
+ * @param {import('@playwright/test').Page} page
+ * @param {string} name About, Projects, Technologies, or Contact
+ */
+function menuTitle(page, name) {
+  return menuBar(page).getByRole('link', { name, exact: true })
+}
+
+/**
+ * Moves keyboard focus to the next link or control, as a keyboard visitor would in this browser.
+ * Safari on a Mac skips links on Tab unless the visitor holds Option, as its keyboard users do.
+ * @param {import('@playwright/test').Page} page
+ */
+async function tabToNext(page) {
+  const safariOnMac = page.context().browser()?.browserType().name() === 'webkit' && process.platform === 'darwin'
+  await page.keyboard.press(safariOnMac ? 'Alt+Tab' : 'Tab')
+}
+
+/**
+ * Expects something to be wholly on the screen, edge to edge. Fractional-pixel layouts count:
+ * unlike a visibility ratio, the check doesn't depend on how the browser rounds them.
+ * @param {import('@playwright/test').Page} page
+ * @param {import('@playwright/test').Locator} locator
+ */
+async function expectWhollyOnScreen(page, locator) {
+  await expect(locator).toBeVisible()
+  await expect
+    .poll(async () => {
+      const box = await locator.boundingBox()
+      const screen = page.viewportSize()
+      if (!box || !screen) return false
+      return box.x >= 0 && box.y >= 0 && box.x + box.width <= screen.width && box.y + box.height <= screen.height
+    })
+    .toBe(true)
+}
+
+/**
  * Finds a labelled group (such as Education or Languages) inside a Section.
  * @param {import('@playwright/test').Locator} container
  * @param {string} name
@@ -145,6 +199,11 @@ async function expectWebOptimized(page, image, maxBytes) {
 module.exports = {
   PHONE_NUMBER,
   section,
+  sectionHeading,
+  menuBar,
+  menuTitle,
+  tabToNext,
+  expectWhollyOnScreen,
   group,
   pdfText,
   lookAt,
