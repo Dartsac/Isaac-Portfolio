@@ -1,10 +1,10 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { section, group, loadedImage } = require('./support/portfolio')
+const { openPortfolio, section, group, loadedImage } = require('./support/portfolio')
 
 test.describe('About Section', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
   })
 
   test('shows Isaac’s headshot', async ({ page }) => {

@@ -27,11 +27,50 @@
 
     <link rel="stylesheet" href="css/normalize.css" />
     <link rel="stylesheet" href="css/style.css" />
+    <!-- Not deferred: it chooses how the Intro plays before the page is first drawn. -->
+    <script src="js/intro.js"></script>
     <script src="js/menu-bar.js" defer></script>
     <script src="js/time-machine.js" defer></script>
   </head>
 
   <body>
+    <!-- The Intro: drawn over the portfolio only while it plays, then hidden, leaving the page as it is. -->
+    <div class="intro">
+      <div class="intro__stage" aria-hidden="true">
+        <div class="intro__macintosh" data-testid="intro-macintosh">
+          <div class="intro__bezel">
+            <div class="intro__screen">
+              <span class="intro__glass"></span>
+              <!-- An original smiling computer, drawn for this portfolio: a little computer and keyboard. -->
+              <svg
+                class="intro__happy-computer"
+                data-testid="intro-happy-computer"
+                viewBox="0 0 32 32"
+                shape-rendering="crispEdges"
+                fill="#000"
+                stroke="#000"
+                stroke-width="1"
+              >
+                <rect x="7.5" y="1.5" width="17" height="21" rx="1.5" fill="#fff" />
+                <rect x="10.5" y="4.5" width="11" height="9" rx="1" fill="#fff" />
+                <rect x="13" y="7" width="2" height="2" stroke="none" />
+                <rect x="17" y="7" width="2" height="2" stroke="none" />
+                <path d="M12.5 10.5h1v1h5v-1h1" fill="none" />
+                <rect x="16" y="17" width="6" height="1" stroke="none" />
+                <rect x="10.5" y="22.5" width="11" height="2" fill="#fff" />
+                <rect x="4.5" y="26.5" width="23" height="4" rx="0.5" fill="#fff" />
+                <path d="M7 28.5h18" stroke-dasharray="1 1" />
+              </svg>
+            </div>
+          </div>
+          <div class="intro__chin">
+            <span class="intro__floppy-slot"></span>
+          </div>
+        </div>
+      </div>
+      <button class="intro__skip button" type="button">Skip Intro</button>
+    </div>
+
     <div class="macintosh">
       <div class="macintosh__bezel">
         <div class="macintosh__screen">

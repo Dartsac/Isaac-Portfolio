@@ -1,10 +1,10 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { section, group } = require('./support/portfolio')
+const { openPortfolio, section, group } = require('./support/portfolio')
 
 test.describe('Technologies Section', () => {
   test('groups the resume’s core skills by languages, data, and tools', async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
     const technologies = section(page, 'Technologies')
 
     const expectedGroups = {

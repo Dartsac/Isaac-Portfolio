@@ -1,43 +1,19 @@
 // @ts-check
-const { test, expect, devices } = require('@playwright/test')
-const { section, sectionHeading, menuBar, menuTitle, tabToNext, expectWhollyOnScreen } = require('./support/portfolio')
+const { test, expect } = require('@playwright/test')
+const {
+  PHONES,
+  LAYOUTS,
+  useLayout,
+  openPortfolio,
+  section,
+  sectionHeading,
+  menuBar,
+  menuTitle,
+  tabToNext,
+  expectWhollyOnScreen,
+} = require('./support/portfolio')
 
 const SECTIONS = ['About', 'Projects', 'Technologies', 'Contact']
-
-/**
- * @typedef {object} Layout a way visitors see the portfolio
- * @property {string} name
- * @property {string | undefined} browser the browser engine its visitors use, or any project's own
- * @property {Partial<import('@playwright/test').PlaywrightTestOptions>} emulation the screen and input to emulate
- */
-
-/**
- * Phones, each emulated only in the browser engine its owners run: Chrome on Android, Safari on iPhone.
- * A describe group can't choose its browser, so a phone's tests skip any project running another one.
- * @type {Layout[]}
- */
-const PHONES = ['Pixel 7', 'iPhone 15'].map((name) => {
-  const { defaultBrowserType, ...emulation } = devices[name]
-  return { name, browser: defaultBrowserType, emulation }
-})
-
-/**
- * The compact Macintosh on a desktop, in every project's own browser, and the full-screen Mac Window on each phone.
- * @type {Layout[]}
- */
-const LAYOUTS = [{ name: 'desktop', browser: undefined, emulation: {} }, ...PHONES]
-
-/**
- * Runs a layout's tests only in the browser its visitors use.
- * @param {Layout} layout
- */
-function useLayout(layout) {
-  test.skip(
-    ({ browserName }) => layout.browser !== undefined && browserName !== layout.browser,
-    `${layout.name} visitors use ${layout.browser}`,
-  )
-  test.use(layout.emulation)
-}
 
 /**
  * Expects a visitor to be reading a Section: its heading is fully on screen, nothing such as the
@@ -196,7 +172,7 @@ for (const layout of LAYOUTS) {
     useLayout(layout)
 
     test('offers About, Projects, Technologies, and Contact wherever the visitor has scrolled', async ({ page }) => {
-      await page.goto('/')
+      await openPortfolio(page)
 
       await expect(menuBar(page).getByRole('link')).toHaveText(SECTIONS)
       await expectWhollyOnScreen(page, menuBar(page))
@@ -208,7 +184,7 @@ for (const layout of LAYOUTS) {
     })
 
     test('shows which Section is being read as visitors scroll', async ({ page }) => {
-      await page.goto('/')
+      await openPortfolio(page)
       await expectCurrent(page, 'About')
 
       for (const name of ['Projects', 'Technologies', 'Projects', 'About']) {
@@ -223,7 +199,7 @@ for (const layout of LAYOUTS) {
 
     for (const name of [...SECTIONS].reverse()) {
       test(`moves to the ${name} Section when its menu title is clicked`, async ({ page }) => {
-        await page.goto('/')
+        await openPortfolio(page)
         await menuTitle(page, farFrom(name)).click()
 
         await menuTitle(page, name).click()
@@ -235,7 +211,7 @@ for (const layout of LAYOUTS) {
 
     test('glides to the chosen Section, marking only it on the way past the others', async ({ page }) => {
       await recordMenuBarAndScrolling(page)
-      await page.goto('/')
+      await openPortfolio(page)
       await menuTitle(page, 'Contact').click()
       await expectShowing(page, 'Contact')
       await expectCurrent(page, 'Contact')
@@ -263,7 +239,7 @@ for (const layout of LAYOUTS) {
 
     test('keeps following the reading when opened from a mistyped link', async ({ page }) => {
       // A truncated percent escape, as a mangled share link might carry.
-      await page.goto('/#%E0')
+      await openPortfolio(page, '/#%E0')
       await expectCurrent(page, 'About')
 
       await scrollTo(page, 'Technologies')
@@ -271,7 +247,7 @@ for (const layout of LAYOUTS) {
     })
 
     test('is the first stop for keyboard visitors', async ({ page }) => {
-      await page.goto('/')
+      await openPortfolio(page)
 
       for (const name of SECTIONS) {
         await tabToNext(page)
@@ -283,7 +259,7 @@ for (const layout of LAYOUTS) {
       test(`moves to the ${name} Section, and focus into it, when its menu title is chosen by keyboard`, async ({
         page,
       }) => {
-        await page.goto('/')
+        await openPortfolio(page)
         await menuTitle(page, farFrom(name)).click()
 
         await menuTitle(page, name).focus()
@@ -297,7 +273,7 @@ for (const layout of LAYOUTS) {
     }
 
     test('lets keyboard visitors tab on through the Section they chose', async ({ page }) => {
-      await page.goto('/')
+      await openPortfolio(page)
       await menuTitle(page, 'Projects').focus()
       await page.keyboard.press('Enter')
 
@@ -309,7 +285,7 @@ for (const layout of LAYOUTS) {
 
 test.describe('Mac Window on desktop', () => {
   test('scrolls inside the Macintosh screen exactly as far as the visitor asks', async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
     const macWindow = page.getByRole('main')
     const menuBarBefore = await boxOf(menuBar(page))
     const box = await boxOf(macWindow)
@@ -328,7 +304,7 @@ test.describe('Mac Window on desktop', () => {
 
   test('keeps marking the Section being read when a menu title is opened in a new tab', async ({ page, context }) => {
     await recordMenuBarAndScrolling(page)
-    await page.goto('/')
+    await openPortfolio(page)
     await expectCurrent(page, 'About')
 
     const [newTab] = await Promise.all([
@@ -349,7 +325,7 @@ test.describe('Mac Window on desktop', () => {
   ]) {
     test(`fits every menu title in the Menu Bar of a ${size.width} × ${size.height} window`, async ({ page }) => {
       await page.setViewportSize(size)
-      await page.goto('/')
+      await openPortfolio(page)
 
       await expectMenuTitlesFit(page)
     })
@@ -361,7 +337,7 @@ for (const phone of PHONES) {
     useLayout(phone)
 
     test('fills the screen below the Menu Bar, keeping its classic title bar', async ({ page }) => {
-      await page.goto('/')
+      await openPortfolio(page)
       const screen = page.viewportSize()
       if (!screen) throw new Error('No viewport')
       const menu = await boxOf(menuBar(page))
@@ -378,7 +354,7 @@ for (const phone of PHONES) {
 
     test('fits every menu title across even a small phone', async ({ page }) => {
       await page.setViewportSize({ width: 320, height: 568 })
-      await page.goto('/')
+      await openPortfolio(page)
 
       await expectMenuTitlesFit(page)
     })
@@ -387,7 +363,7 @@ for (const phone of PHONES) {
       page,
       browserName,
     }) => {
-      await page.goto('/')
+      await openPortfolio(page)
       const titleBar = page.getByTestId('mac-window-title-bar')
       const before = { menu: await boxOf(menuBar(page)), titleBar: await boxOf(titleBar) }
 

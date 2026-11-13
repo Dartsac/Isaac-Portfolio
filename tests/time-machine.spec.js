@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { lookAt, colorfulness, similarity, loadedImage, expectWebOptimized } = require('./support/portfolio')
+const { openPortfolio, lookAt, colorfulness, similarity, loadedImage, expectWebOptimized } = require('./support/portfolio')
 
 /** @typedef {import('./support/portfolio').ScreenArea} ScreenArea */
 /** @typedef {{ name: string, images: (string | RegExp)[] }} ToggleGroup a Full color toggle and its images */
@@ -94,7 +94,7 @@ async function expectCnnArtInColor(page, inColor) {
 
 test.describe('Time Machine toggle', () => {
   test('offers one Full color toggle, off by default, per image or group of images', async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
     const toggles = page.getByRole('main').getByRole('button', { name: /^Full color / })
 
     await expect(toggles).toHaveCount(TOGGLES.length)
@@ -105,7 +105,7 @@ test.describe('Time Machine toggle', () => {
 
   test('shows every CNN Art image in full color from the keyboard, and back to 1-bit', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto('/')
+    await openPortfolio(page)
     for (const name of CNN_ART.images) await oneBitImage(page, name)
     const toggle = page.getByRole('button', { name: CNN_ART.name, exact: true })
     const output = await areaOf(page.getByRole('img', { name: CNN_ART.images[2] }))
@@ -126,7 +126,7 @@ test.describe('Time Machine toggle', () => {
     page,
   }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto('/')
+    await openPortfolio(page)
     for (const name of CNN_ART.images) await oneBitImage(page, name)
     const toggle = page.getByRole('button', { name: CNN_ART.name, exact: true })
 
@@ -142,7 +142,7 @@ test.describe('Time Machine toggle', () => {
 
   test('shows an image in full color when it is double-clicked, as with one click', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto('/')
+    await openPortfolio(page)
     const crystal = TOGGLES[1]
     const image = await oneBitImage(page, crystal.images[0])
     const toggle = page.getByRole('button', { name: crystal.name, exact: true })
@@ -156,7 +156,7 @@ test.describe('Time Machine toggle', () => {
 
   test('lines each full-color image up with its 1-bit image', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto('/')
+    await openPortfolio(page)
 
     for (const { name: toggleName, images } of TOGGLES) {
       const oneBitBrightness = []
@@ -180,7 +180,7 @@ test.describe('Time Machine toggle', () => {
 })
 
 test('loads every full-color image, web-optimized', async ({ page }) => {
-  await page.goto('/')
+  await openPortfolio(page)
   for (const { name } of TOGGLES) {
     const button = page.getByRole('button', { name, exact: true })
     await button.scrollIntoViewIfNeeded()
@@ -201,7 +201,7 @@ test.describe('Time Machine 1-bit images on a full-HD desktop screen', () => {
   test.use({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 })
 
   test('draws every 1-bit image at its natural width, so no pixel of the dither is dropped', async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
     const images = page.getByRole('main').getByRole('img')
     await expect(images).toHaveCount(TOGGLES.flatMap(({ images }) => images).length)
 
@@ -220,7 +220,7 @@ test.describe('Time Machine on a touch screen', () => {
     page,
   }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto('/')
+    await openPortfolio(page)
     for (const name of CNN_ART.images) await oneBitImage(page, name)
     const toggle = page.getByRole('button', { name: CNN_ART.name, exact: true })
 
@@ -236,7 +236,7 @@ test.describe('Time Machine on a touch screen', () => {
 
 test.describe('Time Machine lens', () => {
   test('shows the full-color image only in a lens around the pointer', async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
     const area = await areaOf(await oneBitImage(page, CNN_ART.images[2]))
     const center = { x: area.x + area.width / 2, y: area.y + area.height / 2 }
     const aroundPointer = probeAround(area, center)
@@ -256,7 +256,7 @@ test.describe('Time Machine lens', () => {
     page,
   }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto('/')
+    await openPortfolio(page)
 
     for (const { name, images } of TOGGLES) {
       for (const image of images) await oneBitImage(page, image)
@@ -280,7 +280,7 @@ test.describe('Time Machine lens', () => {
   })
 
   test('keeps the lens under a still pointer while the Mac Window scrolls', async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
     const image = await oneBitImage(page, CNN_ART.images[2])
     const before = await areaOf(image)
     const pointer = { x: before.x + before.width / 2, y: before.y + before.height / 5 }
@@ -297,7 +297,7 @@ test.describe('Time Machine lens', () => {
   })
 
   test('hides the lens when the image scrolls out from under a still pointer', async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
     const image = await oneBitImage(page, CNN_ART.images[2])
     const before = await areaOf(image)
     await page.mouse.move(before.x + before.width / 3, before.y + before.height - before.height / 8)

@@ -45,9 +45,11 @@ body {
 
 /******************************************
 /* COMPACT MACINTOSH
-/* An original, code-drawn compact computer that frames the Mac Window.
+/* An original, code-drawn compact computer that frames the Mac Window. The
+/* Intro draws the same computer, so it boots and zooms into this very frame.
 /*******************************************/
-.macintosh {
+.macintosh,
+.intro__macintosh {
   --mac-height: min(96vh, 60rem);
   width: calc(var(--mac-height) * 0.78);
   height: var(--mac-height);
@@ -59,7 +61,8 @@ body {
   box-shadow: 0.5rem 0.5rem 0 var(--ink);
 }
 
-.macintosh__bezel {
+.macintosh__bezel,
+.intro__bezel {
   flex: 0 0 78%;
   min-height: 0;
   display: flex;
@@ -69,7 +72,8 @@ body {
   border-radius: 0.75rem;
 }
 
-.macintosh__screen {
+.macintosh__screen,
+.intro__screen {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -78,11 +82,15 @@ body {
   border: var(--rule) solid var(--ink);
   border-radius: 1rem / 1.25rem;
   overflow: hidden;
+}
+
+.macintosh__screen {
   /* The Menu Bar sizes its menu titles from this screen's width. */
   container-type: inline-size;
 }
 
-.macintosh__chin {
+.macintosh__chin,
+.intro__chin {
   flex: 1;
   display: flex;
   align-items: center;
@@ -90,7 +98,8 @@ body {
   padding: 0 14%;
 }
 
-.macintosh__floppy-slot {
+.macintosh__floppy-slot,
+.intro__floppy-slot {
   width: 30%;
   height: 0.6rem;
   border: var(--rule) solid var(--ink);
@@ -708,6 +717,129 @@ a:focus-visible {
 
 .contact-link__label {
   font-weight: 700;
+}
+
+/******************************************
+/* INTRO
+/* Drawn over the portfolio only while the Intro plays (js/intro.js marks the
+/* page with data-intro), so without it the page is simply ready.
+/*******************************************/
+.intro {
+  display: none;
+}
+
+html[data-intro] .intro {
+  display: block;
+}
+
+.intro__stage {
+  position: fixed;
+  z-index: 10;
+  inset: 0;
+  /* Centered even where the Macintosh is wider than a phone, before it shrinks into the distance. */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* As the page lays out the Macintosh, so the Intro's computer lands exactly on it. */
+  padding: 2vh 1rem;
+  background: var(--dither);
+  overflow: hidden;
+  /* A swipe on the Intro doesn't scroll the portfolio hidden under it. */
+  touch-action: none;
+}
+
+/* The full Intro starts with the Macintosh in the distance, still dark: js/intro.js zooms in from here. */
+html[data-intro='full'] .intro__macintosh {
+  opacity: 0;
+  transform: scale(0.45);
+}
+
+.intro__screen {
+  position: relative;
+  justify-content: center;
+  align-items: center;
+}
+
+/* The screen's dark glass, before it powers on. */
+.intro__glass {
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+}
+
+.intro__macintosh {
+  flex: none;
+}
+
+.intro__happy-computer {
+  width: 30%;
+  height: auto;
+  opacity: 0;
+}
+
+/* Once the Intro has zoomed into the screen, the portfolio shows through. */
+html[data-intro-phase='typing'] .intro__stage {
+  pointer-events: none;
+}
+
+/* Below Isaac's name and Headline, the Mac Window stays empty until they are typed. */
+html[data-intro-phase='typing'] .mac-window__content > :not(.ready-title) {
+  opacity: 0;
+}
+
+/* A line being typed keeps its text in place, unseen, under a copy that shows only what is typed. */
+.intro-typing {
+  position: relative;
+  color: transparent;
+}
+
+.intro-typing__echo {
+  position: absolute;
+  inset: 0;
+  color: var(--ink);
+}
+
+.intro-typing__rest {
+  color: transparent;
+}
+
+/* A block caret after the last letter typed, taking no room so the line doesn't shift. */
+.intro-typing__caret {
+  position: relative;
+}
+
+.intro-typing__caret::after {
+  content: '';
+  position: absolute;
+  left: 0.05em;
+  bottom: -0.1em;
+  width: 0.55em;
+  height: 1.1em;
+  background: var(--ink);
+}
+
+.intro__skip {
+  position: fixed;
+  z-index: 11;
+  right: 1rem;
+  bottom: 1rem;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.intro__skip:hover {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.intro__skip:focus-visible {
+  outline: var(--rule) solid var(--ink);
+  outline-offset: var(--rule);
+  box-shadow:
+    var(--rule) var(--rule) 0 var(--ink),
+    0 0 0 calc(2 * var(--rule)) var(--paper);
 }
 
 /******************************************

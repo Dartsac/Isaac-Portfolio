@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { section, group, expectWebOptimized } = require('./support/portfolio')
+const { openPortfolio, section, group, expectWebOptimized } = require('./support/portfolio')
 
 /**
  * The five projects, in the order a reader meets them. Years and technologies come from the resume,
@@ -58,7 +58,7 @@ function project(page, name) {
 
 test.describe('Projects Section', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
   })
 
   test('presents the five selected projects in order', async ({ page }) => {

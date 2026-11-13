@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { PHONE_NUMBER, section, pdfText, tabToNext } = require('./support/portfolio')
+const { openPortfolio, PHONE_NUMBER, section, pdfText, tabToNext } = require('./support/portfolio')
 
 const PUBLIC_RESUME = {
   linkName: 'Download Public Resume (PDF)',
@@ -18,7 +18,7 @@ const CONTACT_LINKS = [
 
 test.describe('Contact Section', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
   })
 
   test('links to Isaac’s email and public profiles by accessible name', async ({ page }) => {

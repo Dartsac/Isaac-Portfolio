@@ -1,9 +1,66 @@
 // @ts-check
 // Shared helpers for browser tests of the portfolio.
-const { expect } = require('@playwright/test')
+const { test, expect, devices } = require('@playwright/test')
+
+/**
+ * @typedef {object} Layout a way visitors see the portfolio
+ * @property {string} name
+ * @property {string | undefined} browser the browser engine its visitors use, or any project's own
+ * @property {Partial<import('@playwright/test').PlaywrightTestOptions>} emulation the screen and input to emulate
+ */
+
+/**
+ * Phones, each emulated only in the browser engine its owners run: Chrome on Android, Safari on iPhone.
+ * A describe group can't choose its browser, so a phone's tests skip any project running another one.
+ * @type {Layout[]}
+ */
+const PHONES = ['Pixel 7', 'iPhone 15'].map((name) => {
+  const { defaultBrowserType, ...emulation } = devices[name]
+  return { name, browser: defaultBrowserType, emulation }
+})
+
+/**
+ * The compact Macintosh on a desktop, in every project's own browser, and the full-screen Mac Window on each phone.
+ * @type {Layout[]}
+ */
+const LAYOUTS = [{ name: 'desktop', browser: undefined, emulation: {} }, ...PHONES]
+
+/**
+ * Runs a describe group's tests in a layout, and only in the browser its visitors use.
+ * @param {Layout} layout
+ */
+function useLayout(layout) {
+  test.skip(
+    ({ browserName }) => layout.browser !== undefined && browserName !== layout.browser,
+    `${layout.name} visitors use ${layout.browser}`,
+  )
+  test.use(layout.emulation)
+}
 
 /** Matches a North American phone number such as (555) 555-5555 or 555.555.5555. */
 const PHONE_NUMBER = /(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/
+
+/**
+ * Finds the control that skips the Intro or Short Boot.
+ * @param {import('@playwright/test').Page} page
+ */
+function skipControl(page) {
+  return page.getByRole('button', { name: 'Skip Intro' })
+}
+
+/**
+ * Opens the portfolio and skips the Intro, as a visitor who came for the content would, leaving the
+ * portfolio in its ready state. Visitors who prefer reduced motion have no Intro to skip.
+ * @param {import('@playwright/test').Page} page
+ * @param {string} [url]
+ * @param {Parameters<import('@playwright/test').Page['goto']>[1]} [options]
+ */
+async function openPortfolio(page, url = '/', options) {
+  await page.goto(url, options)
+  const reducedMotion = await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
+  if (!reducedMotion) await skipControl(page).click()
+  await expect(skipControl(page)).toBeHidden()
+}
 
 /**
  * Finds one of the portfolio's Sections in the Mac Window by its accessible name.
@@ -133,6 +190,35 @@ async function lookAt(page, clip) {
 }
 
 /**
+ * How far apart two screenshots of the same size are: the largest difference, from 0 to 255, in any
+ * color channel of any pixel. Browsers may round a color a level differently from one composition of a
+ * page to the next, so a level or two is a difference no visitor could see.
+ * @param {import('@playwright/test').Page} page
+ * @param {Buffer} a
+ * @param {Buffer} b
+ */
+async function largestColorDifference(page, a, b) {
+  return page.evaluate(
+    async ([a, b]) => {
+      const pixelsOf = async (/** @type {string} */ base64) => {
+        const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0))
+        const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }))
+        const { width, height } = bitmap
+        const context = /** @type {OffscreenCanvasRenderingContext2D} */ (new OffscreenCanvas(width, height).getContext('2d'))
+        context.drawImage(bitmap, 0, 0)
+        return { width, height, data: context.getImageData(0, 0, width, height).data }
+      }
+      const [first, second] = await Promise.all([pixelsOf(a), pixelsOf(b)])
+      if (first.width !== second.width || first.height !== second.height) return 255
+      let largest = 0
+      for (let i = 0; i < first.data.length; i++) largest = Math.max(largest, Math.abs(first.data[i] - second.data[i]))
+      return largest
+    },
+    [a.toString('base64'), b.toString('base64')],
+  )
+}
+
+/**
  * Measures how much of an area of the screen shows color rather than black, white, or gray.
  * @param {import('@playwright/test').Page} page
  * @param {ScreenArea} clip
@@ -198,6 +284,11 @@ async function expectWebOptimized(page, image, maxBytes) {
 
 module.exports = {
   PHONE_NUMBER,
+  PHONES,
+  LAYOUTS,
+  useLayout,
+  skipControl,
+  openPortfolio,
   section,
   sectionHeading,
   menuBar,
@@ -207,6 +298,7 @@ module.exports = {
   group,
   pdfText,
   lookAt,
+  largestColorDifference,
   colorfulness,
   similarity,
   loadedImage,

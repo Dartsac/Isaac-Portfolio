@@ -1,12 +1,12 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { section } = require('./support/portfolio')
+const { openPortfolio, section } = require('./support/portfolio')
 
 const HEADLINE = 'Software Engineer — Data & Platform'
 
 test.describe('ready state', () => {
   test('shows the Mac Window with Isaac’s name and Headline as accessible text', async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
 
     const macWindow = page.getByRole('main')
     await expect(macWindow.getByRole('heading', { level: 1, name: 'Isaac Dobson' })).toBeVisible()
@@ -14,7 +14,7 @@ test.describe('ready state', () => {
   })
 
   test('presents the About, Projects, Technologies, and Contact Sections in reading order', async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
 
     const sections = [
       { name: 'About', id: 'about' },
@@ -41,7 +41,7 @@ test.describe('animation runtime', () => {
     const requests = []
     page.on('request', (request) => requests.push(request))
 
-    await page.goto('/', { waitUntil: 'networkidle' })
+    await openPortfolio(page, '/', { waitUntil: 'networkidle' })
     await expect(page.getByRole('heading', { level: 1, name: 'Isaac Dobson' })).toBeVisible()
 
     const siteOrigin = new URL(page.url()).origin
@@ -67,7 +67,7 @@ test.describe('metadata', () => {
     'Isaac Dobson is a software engineer focused on data and platform work. Explore his projects, technologies, and contact details.'
 
   test('describes the portfolio accurately for browsers and search', async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
 
     await expect(page).toHaveTitle(TITLE)
     await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', DESCRIPTION)
@@ -75,7 +75,7 @@ test.describe('metadata', () => {
   })
 
   test('provides social sharing metadata', async ({ page }) => {
-    await page.goto('/')
+    await openPortfolio(page)
 
     const expected = {
       'meta[property="og:type"]': 'website',
