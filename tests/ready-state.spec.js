@@ -1,5 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
+const { section } = require('./support/portfolio')
 
 const HEADLINE = 'Software Engineer — Data & Platform'
 
@@ -23,9 +24,9 @@ test.describe('ready state', () => {
     ]
     const macWindow = page.getByRole('main')
     for (const { name, id } of sections) {
-      const section = macWindow.getByRole('region', { name, exact: true })
-      await expect(section).toHaveAttribute('id', id)
-      await expect(section.getByRole('heading', { level: 2, name, exact: true })).toBeVisible()
+      const region = section(page, name)
+      await expect(region).toHaveAttribute('id', id)
+      await expect(region.getByRole('heading', { level: 2, name, exact: true })).toBeVisible()
     }
 
     const sectionIdsInOrder = await macWindow

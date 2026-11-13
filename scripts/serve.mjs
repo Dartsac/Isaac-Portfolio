@@ -14,6 +14,7 @@ const contentTypes = {
   '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.pdf': 'application/pdf',
 }
 
 // Maps a request path to a file inside the site root, refusing anything outside it.
