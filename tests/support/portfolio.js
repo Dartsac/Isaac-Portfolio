@@ -49,6 +49,14 @@ function skipControl(page) {
 }
 
 /**
+ * Finds the sound control the Intro and Short Boot offer beside their skip control.
+ * @param {import('@playwright/test').Page} page
+ */
+function introSoundControl(page) {
+  return page.getByTestId('intro-controls').getByRole('button', { name: 'Sound', exact: true })
+}
+
+/**
  * Opens the portfolio and skips the Intro, as a visitor who came for the content would, leaving the
  * portfolio in its ready state. Visitors who prefer reduced motion have no Intro to skip.
  * @param {import('@playwright/test').Page} page
@@ -103,6 +111,14 @@ function menuTitle(page, name) {
  */
 function easterEggMenu(page) {
   return menuBar(page).getByRole('button', { name: 'About This Mac', exact: true })
+}
+
+/**
+ * Finds the Menu Bar's sound control, which turns the startup chime on or off once the portfolio is ready.
+ * @param {import('@playwright/test').Page} page
+ */
+function menuBarSoundControl(page) {
+  return menuBar(page).getByRole('button', { name: 'Sound', exact: true })
 }
 
 /**
@@ -306,12 +322,14 @@ module.exports = {
   LAYOUTS,
   useLayout,
   skipControl,
+  introSoundControl,
   openPortfolio,
   section,
   sectionHeading,
   menuBar,
   menuTitle,
   easterEggMenu,
+  menuBarSoundControl,
   tabToNext,
   expectWhollyOnScreen,
   boxOf,

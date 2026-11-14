@@ -202,11 +202,13 @@ function introArtwork() {
 }
 
 /**
- * The screen powers on with a flicker, and greets the visitor with a smiling computer while it starts up.
+ * The screen powers on with a flicker (and the startup chime), and greets the visitor with a smiling computer while it starts up.
  * @param {ReturnType<typeof introArtwork>} artwork
  * @param {number} greetingMs how long the smiling computer shows
  */
 async function powerOn({ glass, happyComputer }, greetingMs) {
+  // js/sound.js rings the startup chime here, for visitors who turned sound on.
+  document.dispatchEvent(new Event('intro:power-on'))
   await play(glass, [{ opacity: 1 }, { opacity: 0.2 }, { opacity: 0.8 }, { opacity: 0.1 }, { opacity: 0 }], {
     duration: 450,
   })

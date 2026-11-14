@@ -9,6 +9,7 @@ const {
   easterEggMenu,
   tabToNext,
   skipControl,
+  introSoundControl,
   largestColorDifference,
 } = require('./support/portfolio')
 
@@ -130,7 +131,8 @@ async function expectShortBoot(page) {
 }
 
 /**
- * Expects the page to show its ready state the moment it loads, with nothing moving.
+ * Expects the page to show its ready state the moment it loads, with no Intro playing. (The CRT effects'
+ * grain and flicker loop forever, unless the visitor prefers reduced motion: the Intro's motions all end.)
  * @param {import('@playwright/test').Page} page
  */
 async function expectReadyWithoutMotion(page) {
@@ -138,7 +140,10 @@ async function expectReadyWithoutMotion(page) {
   expect(await skipControl(page).isVisible(), 'skip control shown').toBe(false)
   expect(await page.getByTestId('intro-macintosh').isVisible(), 'Intro Macintosh shown').toBe(false)
   await expectReady(page)
-  expect(await page.evaluate(() => document.getAnimations().length), 'running animations').toBe(0)
+  const introAnimations = await page.evaluate(
+    () => document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity).length,
+  )
+  expect(introAnimations, 'running Intro animations').toBe(0)
 }
 
 /**
@@ -191,10 +196,13 @@ test.describe('Intro for a first-time visitor', () => {
     })
   }
 
-  test('ends when a keyboard visitor moves on past the skip control, so focus is never hidden', async ({ page }) => {
+  test('ends when a keyboard visitor moves on past its controls, so focus is never hidden', async ({ page }) => {
     await page.goto('/')
     await tabToNext(page)
     await expect(skipControl(page)).toBeFocused()
+    await tabToNext(page)
+    await expect(introSoundControl(page)).toBeFocused()
+    await expect(skipControl(page)).toBeVisible()
 
     await tabToNext(page)
 
@@ -260,14 +268,15 @@ for (const layout of LAYOUTS) {
       await page.goto('/')
       await expectReady(page, { timeout: 15_000 })
       await page.mouse.move(0, 0)
-      const playedOut = await page.screenshot()
+      // The CRT effects' grain and flicker never stop moving: compared at rest.
+      const playedOut = await page.screenshot({ animations: 'disabled' })
 
       await page.evaluate(() => localStorage.clear())
       await page.goto('/')
       await skipControl(page).click()
       await expectReady(page)
       await page.mouse.move(0, 0)
-      const skipped = await page.screenshot()
+      const skipped = await page.screenshot({ animations: 'disabled' })
 
       expect(await largestColorDifference(page, skipped, playedOut), 'how far the two ready states differ').toBeLessThanOrEqual(2)
     })
