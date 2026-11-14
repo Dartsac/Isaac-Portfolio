@@ -5,10 +5,13 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
+    // TypeScript 7 is strict by default. Stated so an editor bundling an older TypeScript checks as strictly.
     "strict": true,
     "skipLibCheck": true,
     "target": "es2022",
     "lib": ["es2022", "dom", "dom.iterable"],
+    // No Node types, so a site script that uses a Node global such as `process` fails the check.
+    // TypeScript 7 leaves them out by default; an older TypeScript includes them unless told this.
     "types": []
   },
   "include": ["js/*.js"]

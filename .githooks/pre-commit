@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stops a commit that has a type error, before it reaches main, where the same check would block the deploy.
+# `npm install` turns these hooks on (the `prepare` script in package.json).
+exec npm run --silent typecheck

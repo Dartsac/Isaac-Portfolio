@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node scripts/serve.mjs",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.site.json",
-    "test": "playwright test"
+    "test": "playwright test",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "author": "Isaac Dobson",
   "license": "ISC",

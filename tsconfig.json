@@ -6,6 +6,7 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
+    // TypeScript 7 is strict by default. Stated so an editor bundling an older TypeScript checks as strictly.
     "strict": true,
     "skipLibCheck": true,
     "target": "es2022",
