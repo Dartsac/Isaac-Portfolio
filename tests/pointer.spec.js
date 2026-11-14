@@ -14,22 +14,38 @@ function cursorOver(locator) {
 }
 
 /**
- * Plain reading text, the Mac Window around it, and the desktop around the Macintosh.
+ * The desktop around the Macintosh, the Menu Bar, and the Mac Window around its text.
  * @param {import('@playwright/test').Page} page
  */
 function plainSurfaces(page) {
+  return [page.locator('body'), page.getByRole('navigation', { name: 'Menu Bar' }), page.getByRole('main')]
+}
+
+/**
+ * Reading text: a paragraph and a Section heading.
+ * @param {import('@playwright/test').Page} page
+ */
+function readingText(page) {
   return [
-    page.locator('body'),
-    page.getByRole('main'),
     section(page, 'About').getByText('Isaac is a Senior Software Engineer at AT&T'),
+    section(page, 'About').getByRole('heading', { level: 2, name: 'About' }),
   ]
 }
 
 test.describe('Pointer on desktop', () => {
-  test('is the classic arrow over the page and its text', async ({ page }) => {
+  test('is the classic arrow over the page around its text', async ({ page }) => {
     await openPortfolio(page)
 
     for (const surface of plainSurfaces(page)) expect(await cursorOver(surface)).toMatch(CLASSIC_POINTER)
+  })
+
+  test('is the I-beam over reading text, which can still be selected', async ({ page }) => {
+    await openPortfolio(page)
+
+    for (const text of readingText(page)) expect(await cursorOver(text)).toBe('text')
+    await easterEggMenu(page).click()
+    const spec = page.getByRole('dialog', { name: 'About This Mac' }).getByRole('definition').first()
+    expect(await cursorOver(spec)).toBe('text')
   })
 
   test('still shows links and buttons as things to press', async ({ page }) => {
@@ -53,7 +69,9 @@ test.describe('Pointer on desktop', () => {
       await page.emulateMedia(media)
       await openPortfolio(page)
 
-      for (const surface of plainSurfaces(page)) expect(await cursorOver(surface)).not.toMatch(CLASSIC_POINTER)
+      for (const surface of [...plainSurfaces(page), ...readingText(page)]) {
+        expect(await cursorOver(surface)).not.toMatch(CLASSIC_POINTER)
+      }
     })
   }
 })
@@ -65,7 +83,9 @@ for (const phone of PHONES) {
     test('is left to the phone, which has no pointer to draw', async ({ page }) => {
       await openPortfolio(page)
 
-      for (const surface of plainSurfaces(page)) expect(await cursorOver(surface)).not.toMatch(CLASSIC_POINTER)
+      for (const surface of [...plainSurfaces(page), ...readingText(page)]) {
+        expect(await cursorOver(surface)).not.toMatch(CLASSIC_POINTER)
+      }
     })
   })
 }

@@ -55,23 +55,22 @@ const CHIME_VOLUME = 0.15
 /** @type {AudioContext | undefined} made only once there is a chime to ring */
 let chimeContext
 
-function audioContext() {
-  chimeContext ??= new AudioContext()
-  return chimeContext
-}
-
 /** @type {GainNode | undefined} the volume of the chime ringing now, if any */
 let ringingVolume
 
 /** Whether the Intro playing now has rung its chime, so it rings once however sound was turned on. */
 let rangDuringIntro = false
 
-/**
- * Rings the chime now.
- * @param {AudioContext} context
- */
-function ring(context) {
-  hush()
+/** Whether a chime is waiting for the browser to allow sound. */
+let chimeWaiting = false
+
+let soundOn = soundRemembered()
+
+/** Rings the chime now. */
+function ringChime() {
+  if (!chimeContext) return
+  hushChime()
+  const context = chimeContext
   const start = context.currentTime + 0.02
   const volume = context.createGain()
   volume.gain.value = CHIME_VOLUME
@@ -95,28 +94,31 @@ function ring(context) {
 }
 
 /** Quickly fades out the chime ringing now, if any. */
-function hush() {
+function hushChime() {
   if (!ringingVolume || !chimeContext) return
   ringingVolume.gain.setTargetAtTime(0, chimeContext.currentTime, 0.03)
   ringingVolume = undefined
 }
 
-let soundOn = soundRemembered()
-
-/** Whether a chime is waiting for the browser to allow sound. */
-let chimeWaiting = false
-
-/** Rings the chime once the browser allows this page to make sound, unless sound is turned off first. */
-function ringWhenAllowed() {
-  const context = audioContext()
-  chimeWaiting = true
-  context.resume().then(ringIfAllowed, () => {})
+/**
+ * Asks the browser to let this page make sound, then rings the waiting chime if it may. A browser that
+ * withholds sound allows it only when asked during a visitor's press or keystroke.
+ */
+function askToMakeSound() {
+  chimeContext ??= new AudioContext()
+  chimeContext.resume().then(ringWaitingChime, () => {})
 }
 
-function ringIfAllowed() {
+/** Rings the chime once the browser allows this page to make sound, unless sound is turned off first. */
+function ringChimeWhenAllowed() {
+  chimeWaiting = true
+  askToMakeSound()
+}
+
+function ringWaitingChime() {
   if (!chimeWaiting || !soundOn || chimeContext?.state !== 'running') return
   chimeWaiting = false
-  ring(chimeContext)
+  ringChime()
 }
 
 // A chime withheld by the browser rings on the visitor's first press or keystroke, which allows sound,
@@ -125,11 +127,9 @@ for (const type of ['pointerdown', 'keydown']) {
   window.addEventListener(
     type,
     (event) => {
-      if (!chimeWaiting || !chimeContext) return
+      if (!chimeWaiting) return
       if (!introPlaying()) chimeWaiting = false
-      else if (!(event.target instanceof Element && event.target.closest('.sound-toggle'))) {
-        chimeContext.resume().then(ringIfAllowed, () => {})
-      }
+      else if (!(event.target instanceof Element && event.target.closest('.sound-toggle'))) askToMakeSound()
     },
     { capture: true },
   )
@@ -137,10 +137,10 @@ for (const type of ['pointerdown', 'keydown']) {
 
 // js/intro.js announces when the Intro or Short Boot starts up the Macintosh.
 document.addEventListener('intro:power-on', () => {
-  if (soundOn && !rangDuringIntro) ringWhenAllowed()
+  if (soundOn && !rangDuringIntro) ringChimeWhenAllowed()
 })
 
-/** The Menu Bar's sound menu and the Intro's sound control, each hidden until it can play the chime. */
+/** The Menu Bar's sound control and the Intro's, each hidden until it can play the chime. */
 const soundControls = /** @type {HTMLElement[]} */ ([...document.querySelectorAll('.menu-bar__sound, .intro__sound')])
 const soundToggles = /** @type {HTMLButtonElement[]} */ ([...document.querySelectorAll('.sound-toggle')])
 
@@ -154,10 +154,10 @@ for (const toggle of soundToggles) {
     soundOn = !soundOn
     rememberSound(soundOn)
     showSoundState()
-    if (soundOn) ringWhenAllowed()
+    if (soundOn) ringChimeWhenAllowed()
     else {
       chimeWaiting = false
-      hush()
+      hushChime()
     }
   })
 }

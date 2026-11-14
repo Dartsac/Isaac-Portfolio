@@ -17,7 +17,7 @@ The classic window on the Macintosh screen where portfolio content is read and s
 _Avoid_: Modal, card, page
 
 **Menu Bar**:
-The persistent classic-Mac menu strip used to move between Sections and reach the Easter Egg.
+The persistent classic-Mac menu strip used to move between Sections, reach the Easter Egg, and turn the Startup Chime on or off.
 _Avoid_: Navbar, header
 
 **Section**:
@@ -27,6 +27,18 @@ _Avoid_: Page, tab
 **Time Machine**:
 The lens and Full color toggle that reveal the full-color source behind a 1-bit image. Images in one project figure can change together as a group.
 _Avoid_: Hover effect, color mode, original (which means "not Apple-owned" elsewhere)
+
+**Startup Chime**:
+The original sound that accompanies the Intro or Short Boot once a visitor turns sound on. Sound is off until they do.
+_Avoid_: Boot sound, Mac chime
+
+**CRT Effects**:
+The faint grain, scanlines, dimmed edges suggesting a curved tube, and flicker drawn over the Macintosh screen. Visitors who prefer reduced motion see them held still.
+_Avoid_: Filter, overlay
+
+**Classic Pointer**:
+The original 1-bit arrow shown in place of the system pointer on desktops with a mouse or trackpad.
+_Avoid_: Custom cursor
 
 **Easter Egg**:
 The hidden About This Mac window that describes Isaac with playful computer-style specs.

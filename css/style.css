@@ -1158,11 +1158,16 @@ html[data-intro-phase='typing'] .mac-window__content > :not(.ready-title) {
 /* A desktop mouse or trackpad draws an original 1-bit arrow. Touch screens
 /* have no pointer to draw, and visitors who ask for forced colors or more
 /* contrast keep their own pointer, which may be larger or bolder. Links and
-/* buttons still show a pointing hand.
+/* buttons still show a pointing hand, and reading text the I-beam that says
+/* it can be selected.
 /*******************************************/
 @media (pointer: fine) and (hover: hover) and (forced-colors: none) and (prefers-contrast: no-preference) {
   html {
     cursor: url('../svg/cursor-arrow.svg') 2 2, default;
+  }
+
+  :is(.mac-window__content, .easter-egg__content) :is(p, li, h1, h2, h3, h4, dt, dd, figcaption) {
+    cursor: text;
   }
 }
 
