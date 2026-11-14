@@ -98,6 +98,14 @@ function menuTitle(page, name) {
 }
 
 /**
+ * Finds the Menu Bar's first menu, the way to the Easter Egg, as on a classic Macintosh.
+ * @param {import('@playwright/test').Page} page
+ */
+function easterEggMenu(page) {
+  return menuBar(page).getByRole('button', { name: 'About This Mac', exact: true })
+}
+
+/**
  * Moves keyboard focus to the next link or control, as a keyboard visitor would in this browser.
  * Safari on a Mac skips links on Tab unless the visitor holds Option, as its keyboard users do.
  * @param {import('@playwright/test').Page} page
@@ -123,6 +131,16 @@ async function expectWhollyOnScreen(page, locator) {
       return box.x >= 0 && box.y >= 0 && box.x + box.width <= screen.width && box.y + box.height <= screen.height
     })
     .toBe(true)
+}
+
+/**
+ * Where something is on screen.
+ * @param {import('@playwright/test').Locator} locator
+ */
+async function boxOf(locator) {
+  const box = await locator.boundingBox()
+  if (!box) throw new Error(`${locator} is not on screen`)
+  return box
 }
 
 /**
@@ -293,8 +311,10 @@ module.exports = {
   sectionHeading,
   menuBar,
   menuTitle,
+  easterEggMenu,
   tabToNext,
   expectWhollyOnScreen,
+  boxOf,
   group,
   pdfText,
   lookAt,

@@ -9,8 +9,10 @@ const {
   sectionHeading,
   menuBar,
   menuTitle,
+  easterEggMenu,
   tabToNext,
   expectWhollyOnScreen,
+  boxOf,
 } = require('./support/portfolio')
 
 const SECTIONS = ['About', 'Projects', 'Technologies', 'Contact']
@@ -133,28 +135,23 @@ async function scrollToEnd(page) {
 }
 
 /**
- * Where something is on screen.
- * @param {import('@playwright/test').Locator} locator
- */
-async function boxOf(locator) {
-  const box = await locator.boundingBox()
-  if (!box) throw new Error(`${locator} is not on screen`)
-  return box
-}
-
-/**
- * Expects the Menu Bar to show every menu title whole: on screen, and not cut off by the Menu Bar's edges.
+ * Expects the Menu Bar to show every menu title whole, and the Easter Egg's menu: on screen, and not
+ * cut off by the Menu Bar's edges.
  * @param {import('@playwright/test').Page} page
  */
 async function expectMenuTitlesFit(page) {
   await expectWhollyOnScreen(page, menuBar(page))
-  for (const name of SECTIONS) {
+  const menus = [
+    { name: 'About This Mac', locator: easterEggMenu(page) },
+    ...SECTIONS.map((name) => ({ name, locator: menuTitle(page, name) })),
+  ]
+  for (const { name, locator } of menus) {
     await expect
       .poll(async () => {
         const bar = await boxOf(menuBar(page))
-        const title = await boxOf(menuTitle(page, name))
+        const title = await boxOf(locator)
         return title.x >= bar.x && title.x + title.width <= bar.x + bar.width
-      }, `the ${name} menu title is inside the Menu Bar`)
+      }, `the ${name} menu is inside the Menu Bar`)
       .toBe(true)
   }
 }
@@ -249,6 +246,9 @@ for (const layout of LAYOUTS) {
     test('is the first stop for keyboard visitors', async ({ page }) => {
       await openPortfolio(page)
 
+      // As on a classic Macintosh, the first menu is the computer's own: here, the Easter Egg.
+      await tabToNext(page)
+      await expect(easterEggMenu(page)).toBeFocused()
       for (const name of SECTIONS) {
         await tabToNext(page)
         await expect(menuTitle(page, name)).toBeFocused()

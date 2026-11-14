@@ -6,6 +6,7 @@ const {
   useLayout,
   section,
   menuTitle,
+  easterEggMenu,
   tabToNext,
   skipControl,
   largestColorDifference,
@@ -153,7 +154,7 @@ async function expectKeyboardSkip(page, key) {
 
   await expectReady(page)
   await tabToNext(page)
-  await expect(menuTitle(page, 'About')).toBeFocused()
+  await expect(easterEggMenu(page)).toBeFocused()
 }
 
 /**
@@ -198,7 +199,7 @@ test.describe('Intro for a first-time visitor', () => {
     await tabToNext(page)
 
     await expectReady(page)
-    await expect(menuTitle(page, 'About')).toBeFocused()
+    await expect(easterEggMenu(page)).toBeFocused()
   })
 
   test('ends when the visitor chooses a Section while the name is typed', async ({ page }) => {
