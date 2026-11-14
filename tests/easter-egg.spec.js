@@ -63,6 +63,8 @@ for (const layout of LAYOUTS) {
     }) => {
       await openPortfolio(page)
       await expect(easterEgg(page)).toBeHidden()
+      // The menu is a picture, so a hovering pointer is told what it opens.
+      await expect(easterEggMenu(page)).toHaveAttribute('title', 'About This Mac')
 
       await easterEggMenu(page).click()
 
