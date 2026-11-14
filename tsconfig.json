@@ -1,0 +1,17 @@
+// Typechecks the Node-side JavaScript: the browser tests, their Playwright config, and the local server.
+// The site's own scripts run in the browser and share one global scope, so tsconfig.site.json checks them.
+// TypeScript only checks here; it emits nothing, and the site still has no build step.
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"]
+  },
+  "include": ["playwright.config.js", "tests/**/*.js", "scripts/**/*.mjs"]
+}

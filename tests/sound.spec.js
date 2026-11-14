@@ -13,7 +13,7 @@ async function listenForChimes(page) {
     const sounds = []
     Object.assign(window, { soundsHeard: sounds })
     const start = AudioScheduledSourceNode.prototype.start
-    AudioScheduledSourceNode.prototype.start = function (...args) {
+    AudioScheduledSourceNode.prototype.start = /** @param {Parameters<typeof start>} args */ function (...args) {
       // A suspended context makes no sound: the browser has not let the page play audio yet.
       if (this.context.state === 'running') sounds.push(performance.now())
       return start.apply(this, args)

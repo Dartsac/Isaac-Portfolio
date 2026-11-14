@@ -1,3 +1,4 @@
+// @ts-check
 // Development-only static file server for local preview and browser tests.
 // The site itself is plain static files and needs no build step.
 // It serves the site below BASE_PATH, by default /Isaac-Portfolio/ as GitHub Pages does, so a preview
@@ -14,6 +15,7 @@ const port = Number(process.env.PORT) || 4173
 const baseName = (process.env.BASE_PATH ?? '/Isaac-Portfolio/').replace(/^\/+|\/+$/g, '')
 const basePath = baseName ? `/${baseName}/` : '/'
 
+/** @type {Record<string, string | undefined>} */
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -25,6 +27,7 @@ const contentTypes = {
 }
 
 // Maps a request path below the base path to a file inside the site root, refusing anything outside it.
+/** @param {string} pathname */
 async function resolveFile(pathname) {
   if (!pathname.startsWith(basePath)) throw new Error('Outside base path')
   const filePath = join(root, decodeURIComponent(pathname.slice(basePath.length)))

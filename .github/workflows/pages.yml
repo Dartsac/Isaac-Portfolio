@@ -1,6 +1,6 @@
 # Publishes the portfolio to GitHub Pages at https://dartsac.github.io/Isaac-Portfolio/.
 # The site is plain static files, so there is no build step: its files are copied and published as they are.
-# The browser test suite gates each deploy by testing that copy, then runs again against the public site.
+# A typecheck and the browser test suite gate each deploy. The suite tests that copy, then runs again against the public site.
 # One-time setup: the repository's Settings → Pages → Source must be "GitHub Actions".
 name: GitHub Pages
 
@@ -28,6 +28,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      # A type error in the site's scripts or the tests blocks the deploy before any browser starts.
+      - run: npm run typecheck
       - run: npx playwright install --with-deps chromium webkit
       # Only the site itself is published, not the tests and tooling around it. The suite tests this
       # copy, so a file the site needs but this list leaves out fails here, before anything goes live.

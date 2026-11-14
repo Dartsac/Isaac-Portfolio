@@ -160,6 +160,7 @@ test.describe('Time Machine toggle', () => {
     await openPortfolio(page)
 
     for (const { name: toggleName, images } of TOGGLES) {
+      /** @type {number[][]} */
       const oneBitBrightness = []
       for (const name of images) {
         oneBitBrightness.push((await lookAt(page, await pictureAreaOf(page, await oneBitImage(page, name)))).brightness)

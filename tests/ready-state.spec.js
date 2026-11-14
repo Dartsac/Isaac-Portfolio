@@ -38,6 +38,7 @@ test.describe('ready state', () => {
 
 test.describe('animation runtime', () => {
   test('loads no Lottie, Bodymovin, or other remote animation runtime', async ({ page }) => {
+    /** @type {import('@playwright/test').Request[]} */
     const requests = []
     page.on('request', (request) => requests.push(request))
 
