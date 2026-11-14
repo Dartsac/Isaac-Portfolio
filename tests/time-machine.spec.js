@@ -44,7 +44,8 @@ async function areaOf(image) {
 }
 
 /**
- * The image's area above any Full color toggle drawn over it, so a pressed toggle doesn't count as picture.
+ * The image's area above any Full color toggle drawn over it, so the toggle doesn't count as picture: neither a
+ * pressed toggle nor its label, whose text Chromium on Linux draws with colored subpixel antialiasing.
  * @param {import('@playwright/test').Page} page
  * @param {import('@playwright/test').Locator} image
  */
@@ -86,7 +87,7 @@ function cornerProbe(area) {
  */
 async function expectCnnArtInColor(page, inColor) {
   for (const name of CNN_ART.images) {
-    const area = await areaOf(page.getByRole('img', { name }))
+    const area = await pictureAreaOf(page, page.getByRole('img', { name }))
     const color = expect.poll(() => colorfulness(page, area), String(name))
     await (inColor ? color.toBeGreaterThan(0.3) : color.toBe(0))
   }
@@ -237,19 +238,21 @@ test.describe('Time Machine on a touch screen', () => {
 test.describe('Time Machine lens', () => {
   test('shows the full-color image only in a lens around the pointer', async ({ page }) => {
     await openPortfolio(page)
-    const area = await areaOf(await oneBitImage(page, CNN_ART.images[2]))
+    const image = await oneBitImage(page, CNN_ART.images[2])
+    const area = await areaOf(image)
+    const picture = await pictureAreaOf(page, image)
     const center = { x: area.x + area.width / 2, y: area.y + area.height / 2 }
     const aroundPointer = probeAround(area, center)
     const farCorner = cornerProbe(area)
 
-    expect(await colorfulness(page, area)).toBe(0)
+    expect(await colorfulness(page, picture)).toBe(0)
 
     await page.mouse.move(center.x, center.y)
     await expect.poll(() => colorfulness(page, aroundPointer)).toBeGreaterThan(0.3)
     expect(await colorfulness(page, farCorner)).toBe(0)
 
     await page.mouse.move(0, 0)
-    await expect.poll(() => colorfulness(page, area)).toBe(0)
+    await expect.poll(() => colorfulness(page, picture)).toBe(0)
   })
 
   test('draws the lens under each Full color toggle, so the toggle looks the same with the lens beside it', async ({
@@ -306,6 +309,6 @@ test.describe('Time Machine lens', () => {
     await page.mouse.wheel(0, before.height / 2)
     await expect.poll(async () => before.y - (await areaOf(image)).y).toBeGreaterThan(before.height / 3)
 
-    await expect.poll(async () => colorfulness(page, await areaOf(image))).toBe(0)
+    await expect.poll(async () => colorfulness(page, await pictureAreaOf(page, image))).toBe(0)
   })
 })

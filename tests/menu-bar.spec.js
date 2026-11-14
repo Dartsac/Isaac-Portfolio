@@ -12,6 +12,7 @@ const {
   menuTitle,
   easterEggMenu,
   tabToNext,
+  swipeUp,
   expectWhollyOnScreen,
   boxOf,
   SECTIONS,
@@ -219,7 +220,13 @@ for (const layout of LAYOUTS) {
 
       const { marked, scrolls } = await recording(page)
       expect(marked).toEqual(['Contact', 'About'])
-      expect(scrolls.length, 'scroll steps on the way').toBeGreaterThan(3)
+      // A glide shows the visitor the portfolio part way there, more than a browser window's height from the
+      // chosen Section, before it arrives; a jump shows only the Section. How many steps the glide takes depends
+      // on how often the browser paints, which on a busy machine may be only two or three times in the glide.
+      const arrival = scrolls[scrolls.length - 1]
+      const windowHeight = page.viewportSize()?.height ?? 0
+      const stepsFarAway = scrolls.slice(0, -1).filter((top) => Math.abs(top - arrival) > windowHeight)
+      expect(stepsFarAway.length, 'scroll steps on the way, a window or more from the chosen Section').toBeGreaterThan(0)
     })
 
     test('opens a link to a Section right at that Section, without gliding through the others', async ({ page }) => {
@@ -369,14 +376,7 @@ for (const phone of PHONES) {
 
       if (browserName === 'chromium') {
         // A real touch swipe up the screen, as a phone visitor reads on.
-        const cdp = await page.context().newCDPSession(page)
-        await cdp.send('Input.synthesizeScrollGesture', {
-          x: 200,
-          y: 600,
-          yDistance: -400,
-          gestureSourceType: 'touch',
-          speed: 800,
-        })
+        await swipeUp(page)
       } else {
         // Playwright can only swipe in Chromium, and mobile WebKit takes no scroll wheel either. Scrolling
         // the page directly still shows the page is what scrolls, with nothing trapped in the Mac Window.

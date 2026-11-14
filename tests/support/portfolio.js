@@ -154,6 +154,22 @@ async function tabToNext(page) {
 }
 
 /**
+ * Swipes a finger 400 pixels up the screen, as a phone visitor does to read on, holding it still before it
+ * lifts so the page doesn't fling on. Chromium only: Playwright can't swipe in other browsers. (Chromium's
+ * synthesized scroll gestures can't touch-scroll in Linux, so the swipe is made of touch events.)
+ * @param {import('@playwright/test').Page} page
+ */
+async function swipeUp(page) {
+  const cdp = await page.context().newCDPSession(page)
+  const finger = (/** @type {number} */ y) => ({ touchPoints: [{ x: 200, y }] })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', ...finger(600) })
+  for (let y = 580; y >= 200; y -= 20) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', ...finger(y) })
+  await page.waitForTimeout(300)
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', ...finger(200) })
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+}
+
+/**
  * Expects something to be wholly on the screen, edge to edge. Fractional-pixel layouts count:
  * unlike a visibility ratio, the check doesn't depend on how the browser rounds them.
  * @param {import('@playwright/test').Page} page
@@ -356,6 +372,7 @@ module.exports = {
   easterEgg,
   menuBarSoundControl,
   tabToNext,
+  swipeUp,
   expectWhollyOnScreen,
   boxOf,
   group,

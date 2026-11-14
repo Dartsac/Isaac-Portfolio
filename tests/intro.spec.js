@@ -9,6 +9,7 @@ const {
   menuTitle,
   easterEggMenu,
   tabToNext,
+  swipeUp,
   skipControl,
   introSoundControl,
   largestColorDifference,
@@ -164,15 +165,19 @@ async function expectKeyboardSkip(page, key) {
 }
 
 /**
- * Waits until the Intro has typed the start of Isaac's name, checking every animation frame, as each
- * letter shows only briefly.
+ * Waits until the Intro has typed at least the start of Isaac's name, and is still typing the rest,
+ * checking every animation frame. Each letter shows only briefly, and a busy browser may paint less often
+ * than letters are typed, so the wait doesn't depend on catching one exact letter.
  * @param {import('@playwright/test').Page} page
  * @param {string} typed
  */
-async function waitUntilNameTyped(page, typed) {
+async function waitWhileNameTyped(page, typed) {
   await page.waitForFunction(
-    (typed) => document.querySelector('[data-testid="typed-name"]')?.textContent === typed,
-    typed,
+    ([typed, name]) => {
+      const text = document.querySelector('[data-testid="typed-name"]')?.textContent ?? ''
+      return text.startsWith(typed) && text !== name
+    },
+    [typed, NAME],
     { polling: 'raf', timeout: 10_000 },
   )
 }
@@ -213,7 +218,7 @@ test.describe('Intro for a first-time visitor', () => {
 
   test('ends when the visitor chooses a Section while the name is typed', async ({ page }) => {
     await visitPortfolio(page)
-    await waitUntilNameTyped(page, 'I')
+    await waitWhileNameTyped(page, 'I')
 
     await menuTitle(page, 'Contact').click()
 
@@ -237,7 +242,7 @@ test.describe('Intro for a first-time visitor', () => {
     await expectNameAndHeadlineAsText()
 
     // …and halfway through typing the name.
-    await waitUntilNameTyped(page, 'Isaac')
+    await waitWhileNameTyped(page, 'Isaac')
     await expectNameAndHeadlineAsText()
     expect(await page.getByTestId('typed-name').textContent(), 'still typing').not.toBe(NAME)
   })
@@ -277,9 +282,15 @@ for (const layout of LAYOUTS) {
       await skipControl(page).click()
       await expectReady(page)
       await page.mouse.move(0, 0)
-      const skipped = await page.screenshot({ animations: 'disabled' })
 
-      expect(await largestColorDifference(page, skipped, playedOut), 'how far the two ready states differ').toBeLessThanOrEqual(2)
+      // For a moment after skipping, Chromium may still shade a few antialiased pixels of the screen's rounded
+      // corners differently as it settles how to composite the screen, so the comparison waits for that.
+      await expect
+        .poll(
+          async () => largestColorDifference(page, await page.screenshot({ animations: 'disabled' }), playedOut),
+          'how far the two ready states differ',
+        )
+        .toBeLessThanOrEqual(2)
     })
   })
 }
@@ -294,8 +305,7 @@ test.describe('Intro on a touch screen', () => {
     await expectSmilingComputer(page)
 
     // A real touch swipe up the screen, as if to read on.
-    const cdp = await page.context().newCDPSession(page)
-    await cdp.send('Input.synthesizeScrollGesture', { x: 200, y: 600, yDistance: -400, gestureSourceType: 'touch' })
+    await swipeUp(page)
     await skipControl(page).click()
 
     await expectReady(page)

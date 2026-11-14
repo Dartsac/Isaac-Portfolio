@@ -18,11 +18,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # The suite runs on macOS, where it is written and where WebKit is Safari's own engine. On Linux, a few
-  # of its pixel checks see antialiasing color that macOS doesn't draw.
   test:
     name: Test the site to publish
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -30,7 +28,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright install chromium webkit
+      - run: npx playwright install --with-deps chromium webkit
       # Only the site itself is published, not the tests and tooling around it. The suite tests this
       # copy, so a file the site needs but this list leaves out fails here, before anything goes live.
       - name: Copy the site's files
@@ -68,7 +66,7 @@ jobs:
   smoke:
     name: Test the public site
     needs: deploy
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -76,7 +74,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npx playwright install chromium webkit
+      - run: npx playwright install --with-deps chromium webkit
       - run: npm test
         env:
           PORTFOLIO_URL: ${{ needs.deploy.outputs.page_url }}
