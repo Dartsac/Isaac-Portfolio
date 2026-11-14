@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { PHONES, useLayout, openPortfolio, section, menuTitle, easterEggMenu } = require('./support/portfolio')
+const { PHONES, useLayout, openPortfolio, section, menuTitle, easterEggMenu, easterEgg } = require('./support/portfolio')
 
 /** The classic arrow drawn for this portfolio, as a cursor image. */
 const CLASSIC_POINTER = /url\(.*cursor-arrow\.svg.*\)/
@@ -44,7 +44,7 @@ test.describe('Pointer on desktop', () => {
 
     for (const text of readingText(page)) expect(await cursorOver(text)).toBe('text')
     await easterEggMenu(page).click()
-    const spec = page.getByRole('dialog', { name: 'About This Mac' }).getByRole('definition').first()
+    const spec = easterEgg(page).getByRole('definition').first()
     expect(await cursorOver(spec)).toBe('text')
   })
 

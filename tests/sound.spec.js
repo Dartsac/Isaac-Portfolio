@@ -74,7 +74,7 @@ async function waitForStartUp(page) {
  * @param {import('@playwright/test').Page} page
  */
 async function turnSoundOnInIntro(page) {
-  await page.goto('/')
+  await page.goto('./')
   await introSoundControl(page).click()
   await expect(introSoundControl(page)).toHaveAttribute('aria-pressed', 'true')
   await skipControl(page).click()
@@ -82,7 +82,7 @@ async function turnSoundOnInIntro(page) {
 
 test.describe('Sound for a first-time visitor', () => {
   test('is off by default, with each sound control showing that it is off', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('./')
 
     await expect(introSoundControl(page)).toBeVisible()
     await expect(introSoundControl(page)).toHaveAttribute('aria-pressed', 'false')
@@ -93,7 +93,7 @@ test.describe('Sound for a first-time visitor', () => {
 
   test('stays silent while the Intro starts up the Macintosh', async ({ page }) => {
     await listenForChimes(page)
-    await page.goto('/')
+    await page.goto('./')
 
     await waitForStartUp(page)
     await skipControl(page).click()
@@ -103,7 +103,7 @@ test.describe('Sound for a first-time visitor', () => {
 
   test('plays the chime once the visitor turns it on during the Intro, which plays on', async ({ page }) => {
     await listenForChimes(page)
-    await page.goto('/')
+    await page.goto('./')
     await waitForStartUp(page)
 
     await introSoundControl(page).click()
@@ -114,7 +114,7 @@ test.describe('Sound for a first-time visitor', () => {
   })
 
   test('can be turned on from the keyboard during the Intro', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('./')
     await tabToNext(page)
     await expect(skipControl(page)).toBeFocused()
 
@@ -174,7 +174,7 @@ test.describe('Sound for a returning visitor', () => {
     await turnSoundOnInIntro(page)
 
     await listenForChimes(page)
-    await page.goto('/')
+    await page.goto('./')
 
     await expect(introSoundControl(page)).toHaveAttribute('aria-pressed', 'true')
     await waitForStartUp(page)
@@ -186,7 +186,7 @@ test.describe('Sound for a returning visitor', () => {
 
     await blockAutoplay(page)
     await listenForChimes(page)
-    await page.goto('/')
+    await page.goto('./')
     await waitForStartUp(page)
     expect(await chimesHeard(page), 'withheld until the visitor interacts').toBe(0)
 
@@ -201,7 +201,7 @@ test.describe('Sound for a returning visitor', () => {
     await expect(menuBarSoundControl(page)).toHaveAttribute('aria-pressed', 'false')
 
     await listenForChimes(page)
-    await page.goto('/')
+    await page.goto('./')
 
     await expect(introSoundControl(page)).toHaveAttribute('aria-pressed', 'false')
     await waitForStartUp(page)

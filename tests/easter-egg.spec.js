@@ -1,14 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { LAYOUTS, useLayout, openPortfolio, menuBar, easterEggMenu, tabToNext, boxOf } = require('./support/portfolio')
-
-/**
- * Finds the Easter Egg: the About This Mac window.
- * @param {import('@playwright/test').Page} page
- */
-function easterEgg(page) {
-  return page.getByRole('dialog', { name: 'About This Mac', exact: true })
-}
+const { LAYOUTS, useLayout, openPortfolio, menuBar, easterEggMenu, easterEgg, tabToNext, boxOf } = require('./support/portfolio')
 
 test.describe('Easter Egg on desktop', () => {
   // From the shortest window that still draws the Macintosh up to a common laptop screen.

@@ -41,7 +41,7 @@ test.describe('animation runtime', () => {
     const requests = []
     page.on('request', (request) => requests.push(request))
 
-    await openPortfolio(page, '/', { waitUntil: 'networkidle' })
+    await openPortfolio(page, './', { waitUntil: 'networkidle' })
     await expect(page.getByRole('heading', { level: 1, name: 'Isaac Dobson' })).toBeVisible()
 
     const siteOrigin = new URL(page.url()).origin
@@ -65,6 +65,7 @@ test.describe('metadata', () => {
   const TITLE = `Isaac Dobson | ${HEADLINE}`
   const DESCRIPTION =
     'Isaac Dobson is a software engineer focused on data and platform work. Explore his projects, technologies, and contact details.'
+  const PUBLIC_URL = 'https://dartsac.github.io/Isaac-Portfolio/'
 
   test('describes the portfolio accurately for browsers and search', async ({ page }) => {
     await openPortfolio(page)
@@ -72,6 +73,13 @@ test.describe('metadata', () => {
     await expect(page).toHaveTitle(TITLE)
     await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', DESCRIPTION)
     await expect(page.locator('meta[name="keywords"]')).toHaveCount(0)
+  })
+
+  test('names the public GitHub Pages address as the portfolio’s own, for search and sharing', async ({ page }) => {
+    await openPortfolio(page)
+
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', PUBLIC_URL)
+    await expect(page.locator('meta[property="og:url"]')).toHaveAttribute('content', PUBLIC_URL)
   })
 
   test('provides social sharing metadata', async ({ page }) => {

@@ -37,6 +37,9 @@ function useLayout(layout) {
   test.use(layout.emulation)
 }
 
+/** The portfolio's Sections, in reading order. */
+const SECTIONS = ['About', 'Projects', 'Technologies', 'Contact']
+
 /** Matches a North American phone number such as (555) 555-5555 or 555.555.5555. */
 const PHONE_NUMBER = /(?:\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/
 
@@ -63,7 +66,7 @@ function introSoundControl(page) {
  * @param {string} [url]
  * @param {Parameters<import('@playwright/test').Page['goto']>[1]} [options]
  */
-async function openPortfolio(page, url = '/', options) {
+async function openPortfolio(page, url = './', options) {
   await page.goto(url, options)
   const reducedMotion = await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   if (!reducedMotion) await skipControl(page).click()
@@ -111,6 +114,14 @@ function menuTitle(page, name) {
  */
 function easterEggMenu(page) {
   return menuBar(page).getByRole('button', { name: 'About This Mac', exact: true })
+}
+
+/**
+ * Finds the Easter Egg: the About This Mac window.
+ * @param {import('@playwright/test').Page} page
+ */
+function easterEgg(page) {
+  return page.getByRole('dialog', { name: 'About This Mac', exact: true })
 }
 
 /**
@@ -317,6 +328,7 @@ async function expectWebOptimized(page, image, maxBytes) {
 }
 
 module.exports = {
+  SECTIONS,
   PHONE_NUMBER,
   PHONES,
   LAYOUTS,
@@ -329,6 +341,7 @@ module.exports = {
   menuBar,
   menuTitle,
   easterEggMenu,
+  easterEgg,
   menuBarSoundControl,
   tabToNext,
   expectWhollyOnScreen,
