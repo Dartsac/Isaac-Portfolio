@@ -41,7 +41,7 @@ test.describe('animation runtime', () => {
     const requests = []
     page.on('request', (request) => requests.push(request))
 
-    await openPortfolio(page, './', { waitUntil: 'networkidle' })
+    await openPortfolio(page, '', { waitUntil: 'networkidle' })
     await expect(page.getByRole('heading', { level: 1, name: 'Isaac Dobson' })).toBeVisible()
 
     const siteOrigin = new URL(page.url()).origin

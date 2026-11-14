@@ -3,12 +3,13 @@
 // It serves the site below BASE_PATH, by default /Isaac-Portfolio/ as GitHub Pages does, so a preview
 // shows what the public site will, and links that only work from a server's root fail as they would
 // there. Like GitHub Pages, it redirects the base path without its trailing slash to the site.
+// SITE_ROOT serves another folder than this repository, such as the copy of the site about to be published.
 import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
 import { extname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const root = resolve(fileURLToPath(new URL('..', import.meta.url)))
+const root = resolve(process.env.SITE_ROOT ?? fileURLToPath(new URL('..', import.meta.url)))
 const port = Number(process.env.PORT) || 4173
 const baseName = (process.env.BASE_PATH ?? '/Isaac-Portfolio/').replace(/^\/+|\/+$/g, '')
 const basePath = baseName ? `/${baseName}/` : '/'

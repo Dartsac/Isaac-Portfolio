@@ -22,13 +22,13 @@ for (const layout of LAYOUTS) {
       page,
     }) => {
       /** @type {string[]} */
-      const missing = []
+      const failedLoads = []
       page.on('requestfailed', (request) => {
         const error = request.failure()?.errorText ?? ''
-        if (!CANCELLED.test(error)) missing.push(`${request.url()} (${error})`)
+        if (!CANCELLED.test(error)) failedLoads.push(`${request.url()} (${error})`)
       })
       page.on('response', (response) => {
-        if (response.status() >= 400) missing.push(`${response.url()} (${response.status()})`)
+        if (response.status() >= 400) failedLoads.push(`${response.url()} (${response.status()})`)
       })
 
       await openPortfolio(page)
@@ -44,7 +44,7 @@ for (const layout of LAYOUTS) {
       await expect(easterEgg(page)).toBeVisible()
       await page.waitForLoadState('networkidle')
 
-      expect(missing).toEqual([])
+      expect(failedLoads).toEqual([])
     })
   })
 }

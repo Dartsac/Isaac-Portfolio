@@ -4,6 +4,7 @@ const {
   PHONES,
   LAYOUTS,
   useLayout,
+  visitPortfolio,
   section,
   menuTitle,
   easterEggMenu,
@@ -118,7 +119,7 @@ function expectTypedOut(typed, line, text) {
  */
 async function expectShortBoot(page) {
   await recordIntro(page)
-  await page.goto('./')
+  await visitPortfolio(page)
   const screenHeight = page.viewportSize()?.height ?? 0
 
   await expect(skipControl(page)).toBeVisible()
@@ -178,7 +179,7 @@ async function waitUntilNameTyped(page, typed) {
 
 test.describe('Intro for a first-time visitor', () => {
   test('can be skipped with the pointer, reaching the ready state', async ({ page }) => {
-    await page.goto('./')
+    await visitPortfolio(page)
 
     await expect(skipControl(page)).toBeVisible()
     await expect(page.getByTestId('intro-macintosh')).toBeVisible()
@@ -189,7 +190,7 @@ test.describe('Intro for a first-time visitor', () => {
 
   for (const key of ['Enter', 'Space']) {
     test(`can be skipped from the keyboard with ${key}, leaving focus ready to carry on`, async ({ page }) => {
-      await page.goto('./')
+      await visitPortfolio(page)
       await expect(skipControl(page)).toBeVisible()
 
       await expectKeyboardSkip(page, key)
@@ -197,7 +198,7 @@ test.describe('Intro for a first-time visitor', () => {
   }
 
   test('ends when a keyboard visitor moves on past its controls, so focus is never hidden', async ({ page }) => {
-    await page.goto('./')
+    await visitPortfolio(page)
     await tabToNext(page)
     await expect(skipControl(page)).toBeFocused()
     await tabToNext(page)
@@ -211,7 +212,7 @@ test.describe('Intro for a first-time visitor', () => {
   })
 
   test('ends when the visitor chooses a Section while the name is typed', async ({ page }) => {
-    await page.goto('./')
+    await visitPortfolio(page)
     await waitUntilNameTyped(page, 'I')
 
     await menuTitle(page, 'Contact').click()
@@ -229,7 +230,7 @@ test.describe('Intro for a first-time visitor', () => {
       expect(lines).toContain(`- paragraph: ${HEADLINE}`)
     }
     await recordIntro(page)
-    await page.goto('./')
+    await visitPortfolio(page)
 
     // While the Macintosh boots…
     await expectSmilingComputer(page)
@@ -248,7 +249,7 @@ for (const layout of LAYOUTS) {
 
     test('boots the Macintosh, zooms into its screen, and types Isaac’s name and then the Headline', async ({ page }) => {
       await recordIntro(page)
-      await page.goto('./')
+      await visitPortfolio(page)
       const screenHeight = page.viewportSize()?.height ?? 0
 
       // The Macintosh boots in the distance, greeting the visitor with a smiling computer.
@@ -265,14 +266,14 @@ for (const layout of LAYOUTS) {
     })
 
     test('ends exactly where skipping it does', async ({ page }) => {
-      await page.goto('./')
+      await visitPortfolio(page)
       await expectReady(page, { timeout: 15_000 })
       await page.mouse.move(0, 0)
       // The CRT effects' grain and flicker never stop moving: compared at rest.
       const playedOut = await page.screenshot({ animations: 'disabled' })
 
       await page.evaluate(() => localStorage.clear())
-      await page.goto('./')
+      await visitPortfolio(page)
       await skipControl(page).click()
       await expectReady(page)
       await page.mouse.move(0, 0)
@@ -289,7 +290,7 @@ test.describe('Intro on a touch screen', () => {
 
   test('leaves the portfolio at its start when the visitor swipes during the Intro', async ({ page }) => {
     await recordIntro(page)
-    await page.goto('./')
+    await visitPortfolio(page)
     await expectSmilingComputer(page)
 
     // A real touch swipe up the screen, as if to read on.
@@ -304,7 +305,7 @@ test.describe('Intro on a touch screen', () => {
 
 test.describe('Short Boot for a returning visitor', () => {
   test('follows a first visit whose Intro was skipped', async ({ page }) => {
-    await page.goto('./')
+    await visitPortfolio(page)
     await skipControl(page).click()
     await expectReady(page)
 
@@ -312,18 +313,18 @@ test.describe('Short Boot for a returning visitor', () => {
   })
 
   test('follows a first visit whose Intro played to the end', async ({ page }) => {
-    await page.goto('./')
+    await visitPortfolio(page)
     await expectReady(page, { timeout: 15_000 })
 
     await expectShortBoot(page)
   })
 
   test('can be skipped with the pointer', async ({ page }) => {
-    await page.goto('./')
+    await visitPortfolio(page)
     await skipControl(page).click()
     await expectReady(page)
 
-    await page.goto('./')
+    await visitPortfolio(page)
     await expect(page.getByTestId('intro-happy-computer')).toBeAttached()
     await skipControl(page).click()
 
@@ -331,11 +332,11 @@ test.describe('Short Boot for a returning visitor', () => {
   })
 
   test('can be skipped from the keyboard', async ({ page }) => {
-    await page.goto('./')
+    await visitPortfolio(page)
     await skipControl(page).click()
     await expectReady(page)
 
-    await page.goto('./')
+    await visitPortfolio(page)
 
     await expectKeyboardSkip(page, 'Enter')
   })
@@ -343,18 +344,18 @@ test.describe('Short Boot for a returning visitor', () => {
 
 test.describe('Intro for a visitor following a link to a Section', () => {
   test('steps aside, opening right at the Section', async ({ page }) => {
-    await page.goto('./#projects', { waitUntil: 'domcontentloaded' })
+    await visitPortfolio(page, '#projects', { waitUntil: 'domcontentloaded' })
 
     await expectReadyWithoutMotion(page)
     await expect(section(page, 'Projects')).toBeInViewport()
   })
 
   test('still plays in full on the visitor’s next visit to the portfolio itself', async ({ page }) => {
-    await page.goto('./#projects')
+    await visitPortfolio(page, '#projects')
     await expectReady(page)
 
     await recordIntro(page)
-    await page.goto('./')
+    await visitPortfolio(page)
 
     await expectFullIntroStarted(page)
   })
@@ -365,7 +366,7 @@ test.describe('Intro for a visitor following a link to a Section', () => {
   ]) {
     test(`plays as usual when the link names ${names}`, async ({ page }) => {
       await recordIntro(page)
-      await page.goto(`./${fragment}`)
+      await visitPortfolio(page, fragment)
 
       await expect(skipControl(page)).toBeVisible()
       await expectFullIntroStarted(page)
@@ -405,7 +406,7 @@ for (const { name, storage } of WITHHELD_STORAGE) {
 
     test('plays the full Intro through to the ready state', async ({ page }) => {
       await recordIntro(page)
-      await page.goto('./')
+      await visitPortfolio(page)
 
       await expectReady(page, { timeout: 15_000 })
       expectTypedOut((await introRecording(page)).typed, 'name', NAME)
@@ -413,12 +414,12 @@ for (const { name, storage } of WITHHELD_STORAGE) {
     })
 
     test('treats a return visit as a first visit', async ({ page }) => {
-      await page.goto('./')
+      await visitPortfolio(page)
       await skipControl(page).click()
       await expectReady(page)
 
       await recordIntro(page)
-      await page.goto('./')
+      await visitPortfolio(page)
       await expect(skipControl(page)).toBeVisible()
       await expectFullIntroStarted(page)
 
@@ -433,19 +434,19 @@ test.describe('Intro for a visitor who prefers reduced motion', () => {
   test.use({ reducedMotion: 'reduce' })
 
   test('shows the ready state immediately on a first visit', async ({ page }) => {
-    await page.goto('./', { waitUntil: 'domcontentloaded' })
+    await visitPortfolio(page, '', { waitUntil: 'domcontentloaded' })
 
     await expectReadyWithoutMotion(page)
   })
 
   test('shows the ready state immediately on a return visit, rather than the Short Boot', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'no-preference' })
-    await page.goto('./')
+    await visitPortfolio(page)
     await skipControl(page).click()
     await expectReady(page)
 
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    await page.goto('./', { waitUntil: 'domcontentloaded' })
+    await visitPortfolio(page, '', { waitUntil: 'domcontentloaded' })
 
     await expectReadyWithoutMotion(page)
   })
@@ -453,7 +454,7 @@ test.describe('Intro for a visitor who prefers reduced motion', () => {
   test('ends a playing Intro as soon as the visitor asks for reduced motion', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await recordIntro(page)
-    await page.goto('./')
+    await visitPortfolio(page)
     await expectSmilingComputer(page)
 
     await page.emulateMedia({ reducedMotion: 'reduce' })

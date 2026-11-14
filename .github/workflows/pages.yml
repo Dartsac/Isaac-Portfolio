@@ -1,6 +1,6 @@
 # Publishes the portfolio to GitHub Pages at https://dartsac.github.io/Isaac-Portfolio/.
-# The site is plain static files, so there is no build step: the repository is published as it is.
-# The browser test suite gates each deploy, then runs again against the public site.
+# The site is plain static files, so there is no build step: its files are copied and published as they are.
+# The browser test suite gates each deploy by testing that copy, then runs again against the public site.
 # One-time setup: the repository's Settings → Pages → Source must be "GitHub Actions".
 name: GitHub Pages
 
@@ -21,7 +21,7 @@ jobs:
   # The suite runs on macOS, where it is written and where WebKit is Safari's own engine. On Linux, a few
   # of its pixel checks see antialiasing color that macOS doesn't draw.
   test:
-    name: Test locally
+    name: Test the site to publish
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
@@ -31,13 +31,22 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install chromium webkit
+      # Only the site itself is published, not the tests and tooling around it. The suite tests this
+      # copy, so a file the site needs but this list leaves out fails here, before anything goes live.
+      - name: Copy the site's files
+        run: mkdir "$RUNNER_TEMP/site" && cp -R index.html css js img svg resume "$RUNNER_TEMP/site/"
       - run: npm test
+        env:
+          SITE_ROOT: ${{ runner.temp }}/site
       - if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: test-results-local
+          name: test-results-before-deploy
           path: test-results/
           retention-days: 7
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: ${{ runner.temp }}/site
 
   deploy:
     name: Deploy
@@ -52,11 +61,7 @@ jobs:
     outputs:
       page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v7
       - uses: actions/configure-pages@v6
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: .
       - id: deployment
         uses: actions/deploy-pages@v5
 
@@ -78,6 +83,6 @@ jobs:
       - if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: test-results-public
+          name: test-results-public-site
           path: test-results/
           retention-days: 7

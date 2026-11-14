@@ -10,6 +10,9 @@ const basePath = '/Isaac-Portfolio/'
 const deployedURL = process.env.PORTFOLIO_URL
 if (deployedURL && !deployedURL.endsWith('/')) throw new Error(`PORTFOLIO_URL must end in a slash: ${deployedURL}`)
 const baseURL = deployedURL ?? `http://localhost:${port}${basePath}`
+// SITE_ROOT has the local server serve another folder than this repository: the copy of the site about
+// to be published, so that what is tested is what goes live.
+const siteRoot = process.env.SITE_ROOT
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -31,7 +34,7 @@ module.exports = defineConfig({
     : {
         command: 'node scripts/serve.mjs',
         url: baseURL,
-        env: { PORT: String(port), BASE_PATH: basePath },
+        env: { PORT: String(port), BASE_PATH: basePath, ...(siteRoot ? { SITE_ROOT: siteRoot } : {}) },
         reuseExistingServer: !process.env.CI,
       },
 })

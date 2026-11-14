@@ -4,6 +4,7 @@ const {
   PHONES,
   LAYOUTS,
   useLayout,
+  visitPortfolio,
   openPortfolio,
   section,
   sectionHeading,
@@ -224,7 +225,7 @@ for (const layout of LAYOUTS) {
     test('opens a link to a Section right at that Section, without gliding through the others', async ({ page }) => {
       await recordMenuBarAndScrolling(page)
 
-      await page.goto('./#contact')
+      await visitPortfolio(page, '#contact')
 
       await expectShowing(page, 'Contact')
       await expectCurrent(page, 'Contact')
@@ -235,7 +236,7 @@ for (const layout of LAYOUTS) {
 
     test('keeps following the reading when opened from a mistyped link', async ({ page }) => {
       // A truncated percent escape, as a mangled share link might carry.
-      await openPortfolio(page, './#%E0')
+      await openPortfolio(page, '#%E0')
       await expectCurrent(page, 'About')
 
       await scrollTo(page, 'Technologies')

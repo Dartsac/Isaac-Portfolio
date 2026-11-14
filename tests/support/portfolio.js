@@ -60,14 +60,25 @@ function introSoundControl(page) {
 }
 
 /**
+ * Visits the portfolio as a browser arriving at it would, leaving the Intro or Short Boot to play.
+ * The address is relative, so it works wherever the portfolio is served: GitHub Pages serves it below a path.
+ * @param {import('@playwright/test').Page} page
+ * @param {string} [fragment] the part of the address that names a Section to arrive at, such as #projects
+ * @param {Parameters<import('@playwright/test').Page['goto']>[1]} [options]
+ */
+async function visitPortfolio(page, fragment = '', options) {
+  await page.goto(`./${fragment}`, options)
+}
+
+/**
  * Opens the portfolio and skips the Intro, as a visitor who came for the content would, leaving the
  * portfolio in its ready state. Visitors who prefer reduced motion have no Intro to skip.
  * @param {import('@playwright/test').Page} page
- * @param {string} [url]
+ * @param {string} [fragment] the part of the address that names a Section to arrive at, such as #projects
  * @param {Parameters<import('@playwright/test').Page['goto']>[1]} [options]
  */
-async function openPortfolio(page, url = './', options) {
-  await page.goto(url, options)
+async function openPortfolio(page, fragment = '', options) {
+  await visitPortfolio(page, fragment, options)
   const reducedMotion = await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   if (!reducedMotion) await skipControl(page).click()
   await expect(skipControl(page)).toBeHidden()
@@ -335,6 +346,7 @@ module.exports = {
   useLayout,
   skipControl,
   introSoundControl,
+  visitPortfolio,
   openPortfolio,
   section,
   sectionHeading,
