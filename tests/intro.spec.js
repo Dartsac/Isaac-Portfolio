@@ -46,7 +46,9 @@ async function expectReady(page, { timeout } = {}) {
 /**
  * @typedef {object} IntroRecording what a visitor saw of the Intro, sampled every animation frame
  * @property {{ line: 'name' | 'headline', text: string }[]} typed each change in the typed name or Headline, in order
- * @property {boolean[]} bootScreenCovered for each frame the Intro showed, whether the Short Boot's screen covered the whole browser window
+ * @property {number | undefined} shownAt when the Intro first showed, by the page's clock (performance.now())
+ * @property {{ time: number, covered: boolean }[]} bootScreen for each frame the Short Boot's screen showed: when, by
+ *   the page's clock, and whether it covered the whole browser window
  * @property {boolean} smiled whether the Intro has shown its smiling computer
  */
 
@@ -59,7 +61,7 @@ async function recordIntro(page) {
   await watchIntroScene(page)
   await page.addInitScript(() => {
     /** @type {IntroRecording} */
-    const recording = { typed: [], bootScreenCovered: [], smiled: false }
+    const recording = { typed: [], shownAt: undefined, bootScreen: [], smiled: false }
     Object.assign(window, { introRecording: recording })
     /** @type {Record<string, string | null>} */
     const last = {}
@@ -84,7 +86,10 @@ async function recordIntro(page) {
         last[line] = text
       }
       if (shows(document.querySelector('.intro__stage'))) {
-        recording.bootScreenCovered.push(coversWindow(document.querySelector('[data-testid="intro-boot-screen"]')))
+        const time = performance.now()
+        recording.shownAt ??= time
+        const bootScreen = document.querySelector('[data-testid="intro-boot-screen"]')
+        if (bootScreen?.checkVisibility()) recording.bootScreen.push({ time, covered: coversWindow(bootScreen) })
       }
       if ([...document.querySelectorAll('[data-testid="intro-happy-computer"]')].some(shows)) recording.smiled = true
       requestAnimationFrame(sample)
@@ -111,6 +116,16 @@ async function expectSmilingComputer(page) {
 }
 
 /**
+ * Waits until the Short Boot starts, its dark screen covering the browser window, and skips it at once. It
+ * plays for little more than a second and a half, and a busy browser may take a while to press the skip control.
+ * @param {import('@playwright/test').Page} page
+ */
+async function skipShortBootAsItStarts(page) {
+  await page.getByTestId('intro-boot-screen').waitFor()
+  await skipControl(page).click()
+}
+
+/**
  * Expects the full Intro to be playing: its 3D Macintosh has powered on, lit by its screen in a dark room.
  * @param {import('@playwright/test').Page} page
  */
@@ -118,6 +133,18 @@ async function expectFullIntroStarted(page) {
   await expect
     .poll(async () => (await introScene(page)).showedLitMacintosh, { message: 'the 3D Macintosh powers on', timeout: 10_000 })
     .toBe(true)
+}
+
+/**
+ * Expects the full Intro's 3D scene never to have shown: it was never drawn, and nothing of it is left, with
+ * every WebGL context the page made released. (Checking whether the browser can draw the scene may make one.)
+ * @param {import('@playwright/test').Page} page
+ */
+async function expectSceneNeverShown(page) {
+  await expect(page.locator('canvas')).toHaveCount(0)
+  const { drawn, contextsMade, contextsReleased } = await introScene(page)
+  expect(drawn, 'the 3D scene drawn').toBe(false)
+  expect(contextsReleased, 'WebGL contexts released').toBe(contextsMade)
 }
 
 /**
@@ -138,9 +165,28 @@ function expectTypedOut(typed, line, text) {
 }
 
 /**
- * Opens the portfolio and expects the Short Boot: a screen covering the whole browser window from the
- * first frame starts up with its smiling computer and goes straight to the ready state, with no 3D
- * Macintosh, no three.js, and nothing typed.
+ * Expects the Short Boot to play through, as recordIntro records it: a screen covering the whole browser
+ * window in every frame it shows starts up with its smiling computer and goes straight to the ready state,
+ * with no 3D Macintosh and nothing typed.
+ * @param {import('@playwright/test').Page} page
+ */
+async function expectShortBootPlays(page) {
+  await expect(skipControl(page)).toBeVisible()
+  await expectSmilingComputer(page)
+  await expectReady(page)
+
+  const { typed, bootScreen } = await introRecording(page)
+  expect(bootScreen.length, 'frames of the Short Boot').toBeGreaterThan(0)
+  expect(
+    bootScreen.map(({ covered }) => covered),
+    'the screen covers the browser window in every frame',
+  ).not.toContain(false)
+  await expectSceneNeverShown(page)
+  expect(typed, 'nothing typed').toEqual([])
+}
+
+/**
+ * Opens the portfolio and expects the Short Boot, without three.js or any WebGL.
  * @param {import('@playwright/test').Page} page
  */
 async function expectShortBoot(page) {
@@ -148,16 +194,9 @@ async function expectShortBoot(page) {
   const threeJsRequests = watchThreeJsRequests(page)
   await visitPortfolio(page)
 
-  await expect(skipControl(page)).toBeVisible()
-  await expectSmilingComputer(page)
-  await expectReady(page)
-
-  const { typed, bootScreenCovered } = await introRecording(page)
-  expect(bootScreenCovered.length, 'frames of the Short Boot').toBeGreaterThan(0)
-  expect(bootScreenCovered, 'the screen covers the browser window in every frame').not.toContain(false)
+  await expectShortBootPlays(page)
   expect((await introScene(page)).contextsMade, 'WebGL contexts made').toBe(0)
   expect(threeJsRequests, 'three.js requests').toEqual([])
-  expect(typed, 'nothing typed').toEqual([])
 }
 
 /**
@@ -356,43 +395,149 @@ const EARLY_ENDINGS = [
   { name: 'asking for reduced motion', end: (page) => page.emulateMedia({ reducedMotion: 'reduce' }) },
 ]
 
+/**
+ * Opens the portfolio with three.js held back, as a very slow connection would, and waits until the page
+ * asks for it.
+ * @param {import('@playwright/test').Page} page
+ * @returns {Promise<() => void>} a function that delivers three.js
+ */
+async function visitWithThreeJsHeldBack(page) {
+  /** @type {() => void} */
+  let deliver = () => {}
+  const delivered = new Promise((resolve) => (deliver = () => resolve(undefined)))
+  await page.route(THREE_JS, async (route) => {
+    await delivered
+    await route.continue()
+  })
+  const requested = page.waitForRequest((request) => THREE_JS.test(request.url()))
+  // WebKit may hold the page's load event for three.js, which is held back here.
+  await visitPortfolio(page, '', { waitUntil: 'domcontentloaded' })
+  await requested
+  return deliver
+}
+
 test.describe('Intro while three.js is still loading', () => {
   for (const { name, end } of EARLY_ENDINGS) {
     test(`ends at once on ${name}, and its 3D scene never shows once three.js arrives`, async ({ page }) => {
       await watchIntroScene(page)
-      /** @type {() => void} */
-      let deliverThreeJs = () => {}
-      const delivered = new Promise((resolve) => (deliverThreeJs = () => resolve(undefined)))
-      await page.route(THREE_JS, async (route) => {
-        await delivered
-        await route.continue()
-      })
-      const threeJsRequested = page.waitForRequest((request) => THREE_JS.test(request.url()))
-      // WebKit may hold the page's load event for three.js, which is held back here.
-      await visitPortfolio(page, '', { waitUntil: 'domcontentloaded' })
-      await threeJsRequested
+      const deliverThreeJs = await visitWithThreeJsHeldBack(page)
 
-      // Ending while three.js is held back shows the Intro doesn't wait for it.
+      // Ending while three.js is held back shows the Intro doesn't wait for it: not even for the Short Boot
+      // that would play once the visitor had waited long enough.
       await end(page)
-      await expectReady(page)
+      await expectReady(page, { timeout: 1_000 })
 
       deliverThreeJs()
       await page.waitForLoadState('networkidle')
-      await expect(page.locator('canvas')).toHaveCount(0)
-      expect((await introScene(page)).contextsMade, 'WebGL contexts made').toBe(0)
+      await expectSceneNeverShown(page)
     })
   }
 })
 
-test.describe('Intro whose 3D scene fails to load', () => {
-  test('ends in the ready state', async ({ page }) => {
-    await watchIntroScene(page)
-    await page.route(THREE_JS, (route) => route.fulfill({ status: 404 }))
-    await visitPortfolio(page)
-
-    await expectReady(page)
-    expect((await introScene(page)).contextsMade, 'WebGL contexts made').toBe(0)
+/**
+ * Takes WebGL away from the page before it loads, as in a browser with WebGL turned off or graphics that
+ * can't run it: a canvas asked for a WebGL context gives none.
+ * @param {import('@playwright/test').Page} page
+ */
+async function withoutWebGL(page) {
+  await page.addInitScript(() => {
+    const getContext = HTMLCanvasElement.prototype.getContext
+    /** @this {HTMLCanvasElement} @param {string} type @param {any[]} rest */
+    function noWebGL(type, ...rest) {
+      return /webgl/.test(type) ? null : getContext.call(this, type, ...rest)
+    }
+    HTMLCanvasElement.prototype.getContext = /** @type {any} */ (noWebGL)
   })
+}
+
+/** Matches the address of the script that builds the full Intro's 3D scene, and loads three.js for it. */
+const INTRO_SCENE = /\/intro-scene\.js$/
+
+/**
+ * Ways the full Intro's 3D scene can fail to load: three.js, or the scene's own script, missing or out of reach.
+ * @type {{ name: string, url: RegExp, fail: (route: import('@playwright/test').Route) => Promise<void> }[]}
+ */
+const SCENE_LOAD_FAILURES = [
+  { name: 'three.js is missing', url: THREE_JS, fail: (route) => route.fulfill({ status: 404 }) },
+  { name: 'three.js can’t be reached', url: THREE_JS, fail: (route) => route.abort() },
+  { name: 'the scene’s own script is missing', url: INTRO_SCENE, fail: (route) => route.fulfill({ status: 404 }) },
+]
+
+test.describe('Intro for a first-time visitor whose browser can’t show it in 3D', () => {
+  /** @type {Error[]} */
+  let pageErrors
+
+  test.beforeEach(({ page }) => {
+    pageErrors = []
+    page.on('pageerror', (error) => pageErrors.push(error))
+  })
+
+  test.afterEach(() => {
+    expect(pageErrors, 'uncaught page errors').toEqual([])
+  })
+
+  test('plays the Short Boot instead when the browser has no WebGL, without loading three.js', async ({ page }) => {
+    await withoutWebGL(page)
+
+    await expectShortBoot(page)
+  })
+
+  for (const { name, url, fail } of SCENE_LOAD_FAILURES) {
+    test(`plays the Short Boot instead when ${name}`, async ({ page }) => {
+      await page.route(url, fail)
+      await recordIntro(page)
+      await visitPortfolio(page)
+
+      await expectShortBootPlays(page)
+    })
+  }
+
+  test('waits about 2 seconds in the dark for a slow 3D scene, then plays the Short Boot, and the scene never shows once it arrives', async ({
+    page,
+  }) => {
+    await recordIntro(page)
+    const deliverThreeJs = await visitWithThreeJsHeldBack(page)
+
+    // three.js arrives while the Short Boot plays.
+    await page.getByTestId('intro-boot-screen').waitFor()
+    deliverThreeJs()
+    await expectShortBootPlays(page)
+
+    const { shownAt, bootScreen } = await introRecording(page)
+    const waited = bootScreen[0].time - (shownAt ?? 0)
+    expect(waited, 'milliseconds waited in the dark').toBeGreaterThan(1_500)
+    expect(waited, 'milliseconds waited in the dark').toBeLessThan(3_000)
+    await page.waitForLoadState('networkidle')
+    await expectSceneNeverShown(page)
+  })
+
+  test('can be skipped during the Short Boot that follows the wait for a slow 3D scene', async ({ page }) => {
+    await recordIntro(page)
+    await visitWithThreeJsHeldBack(page)
+
+    await skipShortBootAsItStarts(page)
+
+    await expectReady(page, { timeout: 1_000 })
+  })
+
+  for (const skipped of [false, true]) {
+    test(`tries the full Intro again on the next visit, after the Short Boot in its place ${skipped ? 'was skipped' : 'played out'}`, async ({
+      page,
+    }) => {
+      const [missing] = SCENE_LOAD_FAILURES
+      await page.route(missing.url, missing.fail)
+      await recordIntro(page)
+      await visitPortfolio(page)
+      if (skipped) await skipShortBootAsItStarts(page)
+      else await expectSmilingComputer(page)
+      await expectReady(page)
+
+      await page.unrouteAll()
+      await visitPortfolio(page)
+
+      await expectFullIntroStarted(page)
+    })
+  }
 })
 
 test.describe('Intro on a touch screen', () => {

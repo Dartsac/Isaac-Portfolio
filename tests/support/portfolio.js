@@ -175,6 +175,8 @@ async function introScene(page) {
     return {
       contextsMade: contexts.length,
       contextsReleased: contexts.filter((context) => context.isContextLost()).length,
+      /** whether the scene was ever drawn */
+      drawn: frames.length > 0,
       /** when the scene was first drawn with its screen lit, by the page's clock */
       litAt: frames.find(({ brightest }) => brightest > 60)?.time,
       /** whether a frame showed a lit screen in a dark room: bright and black parts together */

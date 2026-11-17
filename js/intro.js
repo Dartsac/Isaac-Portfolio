@@ -1,19 +1,23 @@
 // @ts-check
 // Intro: boots an original compact Macintosh in 3D (js/intro-scene.js), enters its screen until it is the
-// visitor's whole screen, the Mac Desktop, and types Isaac's name and Headline in the Mac Window. Every way
-// through it, played out or skipped, ends in the same ready state: the page exactly as it is without this script.
+// visitor's whole screen, the Mac Desktop, and types Isaac's name and Headline in the Mac Window. Where it
+// can't play, the Short Boot plays instead. Every way through it, played out or skipped, ends in the same
+// ready state: the page exactly as it is without this script.
 //
 // This script runs before the page is first drawn, so the Intro covers the portfolio from the first frame.
 // It marks the page with data-intro, the kind of Intro playing, and the stylesheet shows the Intro only then.
 
-/** @typedef {'full' | 'short'} IntroKind the full Intro for a first visit, or the Short Boot for a return */
+/**
+ * @typedef {'full' | 'short'} IntroKind the full Intro for a first visit, or the Short Boot for a return, or
+ *   in place of a full Intro that can't play
+ */
 
 const root = document.documentElement
 
-/** Where the browser remembers that this visitor has had the Intro, so later visits get the Short Boot. */
+/** Where the browser remembers that this visitor has seen the full Intro, so later visits get the Short Boot. */
 const INTRO_SEEN_KEY = 'isaac-dobson-portfolio:intro-seen'
 
-/** Whether this visitor has had the Intro before. Storage that is blocked or unavailable means a first visit. */
+/** Whether this visitor has seen the full Intro before. Storage that is blocked or unavailable means a first visit. */
 function hasSeenIntro() {
   try {
     return window.localStorage.getItem(INTRO_SEEN_KEY) === 'yes'
@@ -22,7 +26,7 @@ function hasSeenIntro() {
   }
 }
 
-/** Remembers that this visitor has had the Intro, where the browser lets it. */
+/** Remembers that this visitor has seen the full Intro, where the browser lets it. */
 function rememberIntroSeen() {
   try {
     window.localStorage.setItem(INTRO_SEEN_KEY, 'yes')
@@ -109,12 +113,15 @@ function pause(ms) {
 /** Ends the Intro, played out or not: every trace of it is undone, leaving the page in its ready state. */
 function finishIntro() {
   if (stopIntro.signal.aborted) return
+  // Only the full Intro, played out or skipped, counts as seen: after a Short Boot that played in its place,
+  // the next visit tries it again.
+  const sawFullIntro = root.dataset.intro === 'full'
   stopIntro.abort()
   for (const animation of introAnimations) animation.cancel()
   for (const cleanup of introCleanups) cleanup()
   delete root.dataset.intro
   delete root.dataset.introPhase
-  rememberIntroSeen()
+  if (sawFullIntro) rememberIntroSeen()
 }
 
 /**
@@ -196,6 +203,41 @@ async function playShortBoot() {
 }
 
 /**
+ * Whether this browser can draw the full Intro's 3D scene: three.js draws with WebGL 2. Asking makes a
+ * WebGL context, released straight away.
+ */
+function canDrawScene() {
+  const context = document.createElement('canvas').getContext('webgl2')
+  context?.getExtension('WEBGL_lose_context')?.loseContext()
+  return context !== null
+}
+
+/** How long a first-time visitor waits in the dark for the 3D scene before the Short Boot plays instead. */
+const SCENE_WAIT_MS = 2000
+
+/**
+ * Loads three.js and builds the full Intro's 3D scene while the visitor waits in the dark, for SCENE_WAIT_MS
+ * at most. A scene given up on, because it was too slow or the Intro ended, stops being built, and a scene
+ * already built is released when the Intro ends.
+ * @returns the scene, ready to power on, or nothing if it failed to load or wasn't ready in time
+ */
+async function loadScene() {
+  const sceneAbandoned = new AbortController()
+  const abandonScene = () => sceneAbandoned.abort()
+  stopIntro.signal.addEventListener('abort', abandonScene, { once: true })
+  const loading = import('./intro-scene.js')
+    .then(({ createIntroScene }) => createIntroScene(introStage(), happyComputer(), sceneAbandoned.signal))
+    .catch((error) => {
+      if (!sceneAbandoned.signal.aborted) {
+        console.warn('The 3D Intro failed to load, so the Short Boot plays instead.', error)
+      }
+    })
+  const scene = await Promise.race([loading, pause(SCENE_WAIT_MS).then(() => undefined)])
+  if (!scene) abandonScene()
+  return scene
+}
+
+/**
  * The full Intro: in a dark room, the 3D Macintosh's screen powers on, the view enters it as it flares
  * white, and Isaac's name and Headline are typed into the Mac Window before the rest of the portfolio appears.
  */
@@ -204,10 +246,13 @@ async function playFullIntro() {
   const headline = /** @type {HTMLElement} */ (document.querySelector('.ready-title__headline'))
   const restOfMacWindow = document.querySelectorAll('.mac-window__content > :not(.ready-title)')
 
-  // Only now is three.js loaded, with the scene, while the visitor waits in the dark. Ending the Intro
-  // meanwhile stops the scene from being built, and releases a scene already built.
-  const { createIntroScene } = await import('./intro-scene.js')
-  const scene = await createIntroScene(introStage(), happyComputer(), stopIntro.signal)
+  // Only now, and only where it can be drawn, is three.js loaded. Where the scene can't play, the Short Boot
+  // plays instead.
+  const scene = canDrawScene() ? await loadScene() : undefined
+  if (!scene) {
+    root.dataset.intro = 'short'
+    return playShortBoot()
+  }
   await pause(300)
 
   // The screen powers on, lighting the room, and the smiling computer greets the visitor.
