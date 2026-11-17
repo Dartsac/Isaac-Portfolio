@@ -241,7 +241,14 @@ function macintosh(picture) {
   texture.colorSpace = THREE.SRGBColorSpace
   // Crisp 1-bit pixels up close, a soft gray from afar.
   texture.magFilter = THREE.NearestFilter
-  const screenMaterial = new THREE.MeshBasicMaterial({ map: texture, color: 0x000000 })
+  // Drawn in front of the glass just behind it however far off the view is, so the glass never shows through.
+  const screenMaterial = new THREE.MeshBasicMaterial({
+    map: texture,
+    color: 0x000000,
+    polygonOffset: true,
+    polygonOffsetFactor: -1,
+    polygonOffsetUnits: -4,
+  })
   const screen = new THREE.Mesh(curvedGlass(SCREEN.width, SCREEN.height), screenMaterial)
   screen.position.set(0, middle + screenY, glassZ + 0.003)
 
