@@ -129,8 +129,9 @@ function finishIntro() {
  * technology and for layout, while a decorative copy over it shows only what has been typed so far.
  * @param {HTMLElement} line
  * @param {string} testId
+ * @param {{ caretShown?: boolean }} [options] caretShown: the caret shows from now on, before typing starts
  */
-function prepareTyping(line, testId) {
+function prepareTyping(line, testId, { caretShown = false } = {}) {
   const text = line.textContent ?? ''
   const echo = document.createElement('span')
   echo.className = 'intro-typing__echo'
@@ -139,7 +140,7 @@ function prepareTyping(line, testId) {
   typed.dataset.testid = testId
   const caret = document.createElement('span')
   caret.className = 'intro-typing__caret'
-  caret.hidden = true
+  caret.hidden = !caretShown
   const rest = document.createElement('span')
   rest.className = 'intro-typing__rest'
   rest.textContent = text
@@ -246,8 +247,8 @@ async function loadScene() {
 
 /**
  * The full Intro: in a dark room, the 3D Macintosh's screen powers on and shows the Mac Desktop, the view
- * enters it as it flares white, and Isaac's name and Headline are typed into the Mac Window before the rest
- * of the portfolio appears.
+ * lands on it as large as the live page and the screen crossfades into the page, and Isaac's name and
+ * Headline are typed into the Mac Window before the rest of the portfolio appears.
  */
 async function playFullIntro() {
   const name = /** @type {HTMLElement} */ (document.querySelector('.ready-title__name'))
@@ -271,8 +272,9 @@ async function playFullIntro() {
   await pause(650)
   await scene.enter(1400)
 
-  // The Mac Window opens, empty but for a caret, and Isaac's name and the Headline are typed into it.
-  const typeName = prepareTyping(name, 'typed-name')
+  // The screen crossfades into the page, the Mac Window open and empty but for the caret the view landed on,
+  // and Isaac's name and the Headline are typed into it.
+  const typeName = prepareTyping(name, 'typed-name', { caretShown: true })
   const typeHeadline = prepareTyping(headline, 'typed-headline')
   root.dataset.introPhase = 'typing'
   await fadeIntoPortfolio()

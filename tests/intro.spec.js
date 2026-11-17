@@ -163,6 +163,22 @@ function expectCrisp(grayShare) {
 }
 
 /**
+ * Expects the view to have landed on the 3D screen with nothing drawn on it but the Mac Desktop's 1-bit
+ * pattern: crisp, and the same even gray all over, as a phone's screen shows once the smiling computer has gone.
+ * @param {import('@playwright/test').Page} page
+ */
+async function expectLandedOnPatternOnly(page) {
+  const screenAsLanded = await lookAtScreenLanding(page)
+  expect(screenAsLanded, 'the screen alone covers the whole browser window').toBeDefined()
+  const { brightness, grayShare } = /** @type {{ brightness: number[], grayShare: number }} */ (screenAsLanded)
+  expectCrisp(grayShare)
+  const mean = brightness.reduce((sum, cell) => sum + cell, 0) / brightness.length
+  expect(mean, 'a 50% pattern, on average').toBeGreaterThan(100)
+  expect(mean, 'a 50% pattern, on average').toBeLessThan(160)
+  for (const cell of brightness) expect(Math.abs(cell - mean), 'the same gray all over').toBeLessThan(12)
+}
+
+/**
  * Expects the view to have landed on the 3D screen's Menu Bar reaching both ends of the browser window, from
  * its first menu to its sound control, as the live one does: in the upper half of the live Menu Bar, at each
  * end of the window, something is drawn, a cell darker than plain white, both on the live page and on the 3D
@@ -363,6 +379,26 @@ test.describe('Intro for a first-time visitor', () => {
     for (const url of forTheScene) expect(url, 'downloaded for the 3D scene').toMatch(new RegExp(`${THREE_JS.source}|${INTRO_SCENE.source}`))
   })
 
+  test('shows the live caret where the name will be typed from the moment the screen crossfades into the page', async ({ page }) => {
+    await visitPortfolio(page)
+
+    // Read as the handoff begins, in the frame the Mac Window opens for typing, before any letter is typed.
+    const atHandoff = await page.waitForFunction(
+      () => {
+        if (document.documentElement.dataset.introPhase !== 'typing') return false
+        const caret = document.querySelector('.ready-title__name .intro-typing__caret')
+        return {
+          caretShown: caret instanceof HTMLElement && caret.checkVisibility(),
+          typed: document.querySelector('[data-testid="typed-name"]')?.textContent ?? '',
+        }
+      },
+      undefined,
+      { polling: 'raf', timeout: 15_000 },
+    )
+
+    expect(await atHandoff.jsonValue()).toEqual({ caretShown: true, typed: '' })
+  })
+
   test('keeps Isaac’s name and Headline available as text throughout, even while they are typed', async ({ page }) => {
     // Read once, at that moment: a retrying assertion could pass only after the Intro had ended.
     const expectNameAndHeadlineAsText = async () => {
@@ -388,7 +424,9 @@ for (const layout of LAYOUTS) {
   test.describe(`Intro for a first-time visitor on ${layout.name}`, () => {
     useLayout(layout)
 
-    test('boots the 3D Macintosh, enters its screen as it flares white, and types Isaac’s name and then the Headline', async ({
+    const phone = layout.name !== 'desktop'
+
+    test('boots the 3D Macintosh, lands on its screen, crossfades into the page without flaring, and types Isaac’s name and then the Headline', async ({
       page,
     }) => {
       await recordIntro(page)
@@ -404,7 +442,7 @@ for (const layout of LAYOUTS) {
       for (const request of threeJsRequests) expect(new URL(request).origin, request).toBe(siteOrigin)
       const { screenCoveredWindow, flaredOverWindow } = await introScene(page)
       expect(screenCoveredWindow, 'the screen alone covers the whole browser window').toBe(true)
-      expect(flaredOverWindow, 'then flares white over it').toBe(true)
+      expect(flaredOverWindow, 'then flares white over it').toBe(false)
       const { typed } = await introRecording(page)
       expectTypedOut(typed, 'name', NAME)
       expectTypedOut(typed, 'headline', HEADLINE)
@@ -413,37 +451,50 @@ for (const layout of LAYOUTS) {
       expect(headlineStarts, 'the Headline is typed after the name').toBeGreaterThan(nameDone)
     })
 
-    test('shows on its screen the Mac Desktop the view then lands on: the Menu Bar and an empty Mac Window', async ({
-      page,
-    }) => {
-      await watchIntroScene(page)
-      await visitPortfolio(page)
+    if (phone) {
+      test('lands on its screen with nothing drawn on it but the pattern', async ({ page }) => {
+        await watchIntroScene(page)
+        await visitPortfolio(page)
+        await expectReady(page, { timeout: 15_000 })
 
-      // The Mac Desktop the visitor lands on, as typing starts, seen without the Intro fading over it.
-      await page.waitForFunction(() => document.documentElement.dataset.introPhase === 'typing', undefined, {
-        polling: 'raf',
-        timeout: 15_000,
+        await expectLandedOnPatternOnly(page)
       })
-      const screen = /** @type {{ width: number, height: number }} */ (page.viewportSize())
-      const landedOn = await lookAt(page, { x: 0, y: 0, ...screen }, { style: '.intro { visibility: hidden !important; }' })
-      await expectReady(page, { timeout: 15_000 })
+    }
 
-      const screenAsLanded = await lookAtScreenLanding(page)
-      expect(screenAsLanded, 'the screen alone covers the whole browser window').toBeDefined()
-      const { brightness, grayShare } = /** @type {{ brightness: number[], grayShare: number }} */ (screenAsLanded)
-      expect(similarity(brightness, landedOn.brightness), 'how alike the screen and the Mac Desktop look').toBeGreaterThan(0.7)
-      expectCrisp(grayShare)
-    })
+    // A phone's screen shows no Mac Desktop: see above.
+    if (!phone) {
+      test('shows on its screen the Mac Desktop the view then lands on: the Menu Bar and an empty Mac Window', async ({
+        page,
+      }) => {
+        await watchIntroScene(page)
+        await visitPortfolio(page)
 
-    test('lands on its screen’s Menu Bar reaching both ends of the window, from the first menu to the sound control, as the live one does', async ({
-      page,
-    }) => {
-      await watchIntroScene(page)
-      await visitPortfolio(page)
-      await expectReady(page, { timeout: 15_000 })
+        // The Mac Desktop the visitor lands on, as typing starts, seen without the Intro fading over it.
+        await page.waitForFunction(() => document.documentElement.dataset.introPhase === 'typing', undefined, {
+          polling: 'raf',
+          timeout: 15_000,
+        })
+        const screen = /** @type {{ width: number, height: number }} */ (page.viewportSize())
+        const landedOn = await lookAt(page, { x: 0, y: 0, ...screen }, { style: '.intro { visibility: hidden !important; }' })
+        await expectReady(page, { timeout: 15_000 })
 
-      await expectLandedOnWholeMenuBar(page)
-    })
+        const screenAsLanded = await lookAtScreenLanding(page)
+        expect(screenAsLanded, 'the screen alone covers the whole browser window').toBeDefined()
+        const { brightness, grayShare } = /** @type {{ brightness: number[], grayShare: number }} */ (screenAsLanded)
+        expect(similarity(brightness, landedOn.brightness), 'how alike the screen and the Mac Desktop look').toBeGreaterThan(0.7)
+        expectCrisp(grayShare)
+      })
+
+      test('lands on its screen’s Menu Bar reaching both ends of the window, from the first menu to the sound control, as the live one does', async ({
+        page,
+      }) => {
+        await watchIntroScene(page)
+        await visitPortfolio(page)
+        await expectReady(page, { timeout: 15_000 })
+
+        await expectLandedOnWholeMenuBar(page)
+      })
+    }
 
     test('is dark until its screen powers on, then lit by the screen’s glow, in shades of gray', async ({ page }) => {
       await watchIntroScene(page)
@@ -485,8 +536,9 @@ for (const layout of LAYOUTS) {
 }
 
 test.describe('Intro for a first-time visitor on a narrow window drawn at one device pixel to a CSS pixel', () => {
-  // As a narrow desktop browser window, not a phone, whose screen has more device pixels.
-  test.use({ viewport: { width: 412, height: 839 }, deviceScaleFactor: 1 })
+  // A desktop browser window narrower than the 4:3 screen, still in the desktop layout, with fewer device pixels
+  // than a phone's screen.
+  test.use({ viewport: { width: 700, height: 1000 }, deviceScaleFactor: 1 })
 
   test('lands on its screen crisp, in pure black and white, with its whole Menu Bar', async ({ page }) => {
     await watchIntroScene(page)
@@ -508,11 +560,22 @@ test.describe('Intro for a first-time visitor whose window changes shape as it p
     await visitPortfolio(page)
     await expectFullIntroStarted(page)
 
-    // As a phone turned upright would, well before the view lands.
-    await page.setViewportSize({ width: 412, height: 839 })
+    // Narrower than the screen, but still the desktop layout, well before the view lands.
+    await page.setViewportSize({ width: 700, height: 1000 })
 
     await expectReady(page, { timeout: 15_000 })
     await expectLandedOnWholeMenuBar(page)
+  })
+
+  test('lands on its screen with nothing drawn on it but the pattern once the window takes a phone’s shape', async ({ page }) => {
+    await watchIntroScene(page)
+    await visitPortfolio(page)
+    await expectFullIntroStarted(page)
+
+    await page.setViewportSize({ width: 412, height: 839 })
+
+    await expectReady(page, { timeout: 15_000 })
+    await expectLandedOnPatternOnly(page)
   })
 })
 
@@ -520,14 +583,14 @@ test.describe('Intro for a first-time visitor on a window far wider than tall', 
   // Wide enough that an edge left uncovered is more than the sampling of the scene's drawing can miss.
   test.use({ viewport: { width: 2600, height: 400 } })
 
-  test('enters the screen until it alone covers the whole window, before it flares white', async ({ page }) => {
+  test('enters the screen until it alone covers the whole window, and crossfades into the page without flaring', async ({ page }) => {
     await watchIntroScene(page)
     await visitPortfolio(page)
 
     await expectReady(page, { timeout: 15_000 })
     const { screenCoveredWindow, flaredOverWindow } = await introScene(page)
     expect(screenCoveredWindow, 'the screen alone covers the whole browser window').toBe(true)
-    expect(flaredOverWindow, 'then flares white over it').toBe(true)
+    expect(flaredOverWindow, 'then flares white over it').toBe(false)
   })
 })
 
