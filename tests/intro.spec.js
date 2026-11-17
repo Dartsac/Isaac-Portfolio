@@ -153,6 +153,37 @@ async function expectSceneNeverShown(page) {
 }
 
 /**
+ * Expects the 3D screen, as the view landed on it, to have been drawn crisp, in pure black and white: all but a
+ * few of its pixels, where the edges of the screen's triangles are smoothed, as the screen's 1-bit picture shows.
+ * A picture drawn smaller than the window shows it, and so smoothed, leaves gray along every line and letter.
+ * @param {number} grayShare the share of the window's pixels, from 0 to 1, neither pure black nor pure white
+ */
+function expectCrisp(grayShare) {
+  expect(grayShare, 'share of the screen neither pure black nor pure white').toBeLessThan(0.001)
+}
+
+/**
+ * Expects the view to have landed on the 3D screen's Menu Bar reaching both ends of the browser window, from
+ * its first menu to its sound control, as the live one does: in the upper half of the live Menu Bar, at each
+ * end of the window, something is drawn, a cell darker than plain white, both on the live page and on the 3D
+ * screen as the view landed on it.
+ * @param {import('@playwright/test').Page} page
+ */
+async function expectLandedOnWholeMenuBar(page) {
+  const bar = await boxOf(menuBar(page))
+  const end = { y: 0, width: bar.width * 0.1, height: bar.height / 2 }
+  for (const { name, area } of [
+    { name: 'left', area: { x: 0, ...end } },
+    { name: 'right', area: { x: bar.width * 0.9, ...end } },
+  ]) {
+    const live = await lookAt(page, area, { style: '.crt { display: none; }' })
+    expect(Math.min(...live.brightness), `something drawn at the live Menu Bar’s ${name} end`).toBeLessThan(250)
+    const landed = /** @type {{ brightness: number[] }} */ (await lookAtScreenLanding(page, area))
+    expect(Math.min(...landed.brightness), `something drawn at the 3D Menu Bar’s ${name} end`).toBeLessThan(250)
+  }
+}
+
+/**
  * Expects a line to have been typed out one character at a time, from its first letters to the whole line.
  * @param {IntroRecording['typed']} typed
  * @param {'name' | 'headline'} line
@@ -399,8 +430,9 @@ for (const layout of LAYOUTS) {
 
       const screenAsLanded = await lookAtScreenLanding(page)
       expect(screenAsLanded, 'the screen alone covers the whole browser window').toBeDefined()
-      const alike = similarity(/** @type {{ brightness: number[] }} */ (screenAsLanded).brightness, landedOn.brightness)
-      expect(alike, 'how alike the screen and the Mac Desktop look').toBeGreaterThan(0.7)
+      const { brightness, grayShare } = /** @type {{ brightness: number[], grayShare: number }} */ (screenAsLanded)
+      expect(similarity(brightness, landedOn.brightness), 'how alike the screen and the Mac Desktop look').toBeGreaterThan(0.7)
+      expectCrisp(grayShare)
     })
 
     test('lands on its screen’s Menu Bar reaching both ends of the window, from the first menu to the sound control, as the live one does', async ({
@@ -410,19 +442,7 @@ for (const layout of LAYOUTS) {
       await visitPortfolio(page)
       await expectReady(page, { timeout: 15_000 })
 
-      // The upper half of the live Menu Bar, at each end of the window, where its first menu and its sound
-      // control are. Something is drawn there when any cell is darker than plain white.
-      const bar = await boxOf(menuBar(page))
-      const end = { y: 0, width: bar.width * 0.1, height: bar.height / 2 }
-      for (const { name, area } of [
-        { name: 'left', area: { x: 0, ...end } },
-        { name: 'right', area: { x: bar.width * 0.9, ...end } },
-      ]) {
-        const live = await lookAt(page, area, { style: '.crt { display: none; }' })
-        expect(Math.min(...live.brightness), `something drawn at the live Menu Bar’s ${name} end`).toBeLessThan(250)
-        const landed = /** @type {{ brightness: number[] }} */ (await lookAtScreenLanding(page, area))
-        expect(Math.min(...landed.brightness), `something drawn at the 3D Menu Bar’s ${name} end`).toBeLessThan(250)
-      }
+      await expectLandedOnWholeMenuBar(page)
     })
 
     test('is dark until its screen powers on, then lit by the screen’s glow, in shades of gray', async ({ page }) => {
@@ -463,6 +483,38 @@ for (const layout of LAYOUTS) {
     })
   })
 }
+
+test.describe('Intro for a first-time visitor on a narrow window drawn at one device pixel to a CSS pixel', () => {
+  // As a narrow desktop browser window, not a phone, whose screen has more device pixels.
+  test.use({ viewport: { width: 412, height: 839 }, deviceScaleFactor: 1 })
+
+  test('lands on its screen crisp, in pure black and white, with its whole Menu Bar', async ({ page }) => {
+    await watchIntroScene(page)
+    await visitPortfolio(page)
+    await expectReady(page, { timeout: 15_000 })
+
+    const screenAsLanded = await lookAtScreenLanding(page)
+    expect(screenAsLanded, 'the screen alone covers the whole browser window').toBeDefined()
+    expectCrisp(/** @type {{ grayShare: number }} */ (screenAsLanded).grayShare)
+    await expectLandedOnWholeMenuBar(page)
+  })
+})
+
+test.describe('Intro for a first-time visitor whose window changes shape as it plays', () => {
+  test.use({ viewport: { width: 1280, height: 720 } })
+
+  test('lands on its screen’s Menu Bar drawn for the window’s new shape', async ({ page }) => {
+    await watchIntroScene(page)
+    await visitPortfolio(page)
+    await expectFullIntroStarted(page)
+
+    // As a phone turned upright would, well before the view lands.
+    await page.setViewportSize({ width: 412, height: 839 })
+
+    await expectReady(page, { timeout: 15_000 })
+    await expectLandedOnWholeMenuBar(page)
+  })
+})
 
 test.describe('Intro for a first-time visitor on a window far wider than tall', () => {
   // Wide enough that an edge left uncovered is more than the sampling of the scene's drawing can miss.

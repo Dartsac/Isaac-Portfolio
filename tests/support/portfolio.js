@@ -167,13 +167,15 @@ async function watchIntroScene(page) {
       const pixels = landing.getImageData(area.x, area.y, area.width, area.height).data
       const sums = new Array(grid * grid).fill(0)
       const counts = new Array(grid * grid).fill(0)
+      let grays = 0
       for (let i = 0; i < pixels.length; i += 4) {
         const [column, row] = [(i / 4) % area.width, Math.floor(i / 4 / area.width)]
         const cell = Math.floor((row * grid) / area.height) * grid + Math.floor((column * grid) / area.width)
         sums[cell] += (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3
         counts[cell]++
+        if ([pixels[i], pixels[i + 1], pixels[i + 2]].some((level) => level > 8 && level < 247)) grays++
       }
-      return { brightness: sums.map((sum, cell) => sum / counts[cell]) }
+      return { brightness: sums.map((sum, cell) => sum / counts[cell]), grayShare: grays / (pixels.length / 4) }
     }
     Object.assign(window, { lookAtIntroSceneLanding: lookAtLanding })
     /** How the scene's latest drawing looks, if there is one. */
@@ -232,13 +234,14 @@ async function watchIntroScene(page) {
  * which the screen alone covered the window, before it flared (see watchIntroScene).
  * @param {import('@playwright/test').Page} page
  * @param {ScreenArea} [clip] the whole window if not given
- * @returns {Promise<{ brightness: number[] } | undefined>} brightness: a coarse picture of the area, as lookAt
- *   takes of the page; nothing if the screen never covered the window
+ * @returns {Promise<{ brightness: number[], grayShare: number } | undefined>} brightness: a coarse picture of the
+ *   area, as lookAt takes of the page; grayShare: the share of its pixels, from 0 to 1, neither pure black nor pure
+ *   white; nothing if the screen never covered the window
  */
 async function lookAtScreenLanding(page, clip) {
   const area = clip ?? { x: 0, y: 0, ...(/** @type {{ width: number, height: number }} */ (page.viewportSize())) }
   return page.evaluate(
-    (area) => /** @type {{ lookAtIntroSceneLanding: (clip: ScreenArea) => { brightness: number[] } | undefined }} */ (/** @type {unknown} */ (window)).lookAtIntroSceneLanding(area),
+    (area) => /** @type {{ lookAtIntroSceneLanding: (clip: ScreenArea) => { brightness: number[], grayShare: number } | undefined }} */ (/** @type {unknown} */ (window)).lookAtIntroSceneLanding(area),
     area,
   )
 }

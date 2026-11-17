@@ -46,6 +46,14 @@ const SCREEN_PIXELS = { width: 512, height: 384 }
 /** The widest the Mac Desktop's picture is drawn, in pixels, for a browser window far narrower than the screen. */
 const MAX_PICTURE_WIDTH = 2048
 /**
+ * How many of the drawing's pixels, at least, each of the picture's spans once the view has entered the
+ * screen, so it is drawn enlarged, crisp, and never shrunk and smoothed. A little more than one, so that it
+ * still is where the glass curves.
+ */
+const CRISP_SCALE = 1.25
+/** The most device pixels the scene is drawn with to each CSS pixel, so screens with more draw no slower. */
+const MAX_PIXEL_RATIO = 2
+/**
  * The Mac Desktop as the screen shows it, in its pixels, sized like a classic Macintosh's own screen so its
  * text stays legible in 1-bit: the height of the Menu Bar and the Mac Window's title bar, each with its rule;
  * the plain bands above and below the title bar's stripes; the close box's size, and how far it is from the
@@ -260,13 +268,16 @@ async function drawMenuBar(context, menuBar, width, edges) {
  * It is laid out in the part of the picture the browser window shows once the view has entered the screen,
  * as the live page is laid out in the window, so the view lands on what the visitor is about to enter. What
  * reaches the window's edges runs on to the picture's. A window far narrower than the screen shows only the
- * middle of the picture, so the picture is drawn wider, to keep that middle as wide as on a wide window.
+ * middle of the picture, so the picture is drawn wider, to keep that middle as wide as on a wide window, but
+ * never so wide that the window shows it shrunk.
  * @param {HTMLElement} macDesktop the page's Mac Desktop
- * @param {{ width: number, height: number }} browserWindow the browser window's size, in CSS pixels
+ * @param {{ width: number, height: number, pixelRatio: number }} browserWindow the browser window's size, in
+ *   CSS pixels, and how many of the drawing's pixels it has to each
  */
 async function macDesktopPictures(macDesktop, browserWindow) {
   const landed = landingArea(browserWindow.width / browserWindow.height)
-  const width = Math.min(MAX_PICTURE_WIDTH, Math.round((SCREEN_PIXELS.width * ENTERED_SPAN) / landed.width))
+  const landedWidth = Math.min(SCREEN_PIXELS.width * ENTERED_SPAN, (browserWindow.width * browserWindow.pixelRatio) / CRISP_SCALE)
+  const width = Math.min(MAX_PICTURE_WIDTH, Math.round(landedWidth / landed.width))
   const { picture, context } = blankPicture(width, Math.round((width * SCREEN_PIXELS.height) / SCREEN_PIXELS.width))
   const windowArea = {
     left: Math.round(landed.left * width),
@@ -692,19 +703,22 @@ function screenTexture(picture) {
 export async function createIntroScene(stage, { happyComputer, macDesktop }, signal) {
   signal.throwIfAborted()
   const smilingComputer = screenTexture(await smilingComputerPicture(happyComputer))
-  const drawnMacDesktop = await macDesktopPictures(macDesktop, { width: stage.clientWidth, height: stage.clientHeight })
-  const macDesktopPicture = {
-    withCaret: screenTexture(drawnMacDesktop.withCaret),
-    withoutCaret: screenTexture(drawnMacDesktop.withoutCaret),
+  const pixelRatio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO)
+  /** Draws the Mac Desktop's pictures, with the caret and without it, for the browser window's shape now. */
+  const drawMacDesktop = async () => {
+    const drawn = await macDesktopPictures(macDesktop, { width: stage.clientWidth, height: stage.clientHeight, pixelRatio })
+    return { withCaret: screenTexture(drawn.withCaret), withoutCaret: screenTexture(drawn.withoutCaret) }
   }
-  const pictures = [smilingComputer, macDesktopPicture.withCaret, macDesktopPicture.withoutCaret]
+  let macDesktopPicture = await drawMacDesktop()
+  /** Every picture the screen may show. */
+  const pictures = () => [smilingComputer, macDesktopPicture.withCaret, macDesktopPicture.withoutCaret]
   signal.throwIfAborted()
 
   const canvas = document.createElement('canvas')
   canvas.className = 'intro__scene'
   canvas.dataset.testid = 'intro-scene'
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setPixelRatio(pixelRatio)
   renderer.setClearColor(0x000000)
   renderer.shadowMap.enabled = true
   // Only the view moves, so the shadows are drawn once, with the first drawing.
@@ -795,9 +809,29 @@ export async function createIntroScene(stage, { happyComputer, macDesktop }, sig
     renderer.render(scene, camera)
   }
 
+  /** How many times the Mac Desktop has been redrawn for a new window shape, so that only the latest shows. */
+  let redraws = 0
+  /**
+   * Redraws the Mac Desktop for the browser window's new shape, such as a phone turned on its side, so the view
+   * still lands on it as the live page is laid out. Until then, the screen shows the picture it has.
+   */
+  const redrawMacDesktop = async () => {
+    const redraw = ++redraws
+    const redrawn = await drawMacDesktop()
+    const outdated = released || redraw !== redraws
+    for (const picture of Object.values(outdated ? redrawn : macDesktopPicture)) picture.dispose()
+    if (outdated) return
+    for (const picture of Object.values(redrawn)) renderer.initTexture(picture)
+    // The next frame shows it, before anything is drawn with the pictures just released.
+    macDesktopPicture = redrawn
+  }
+
   /** Each animation frame, draws the motion playing, if any, or the scene resized, or the screen's picture changed. */
   const drawFrame = (/** @type {number} */ now) => {
     const resized = fitCanvas()
+    if (resized) {
+      redrawMacDesktop().catch((error) => console.warn('The 3D screen keeps the Mac Desktop drawn for the window’s old shape.', error))
+    }
     const moved = Boolean(motion)
     if (motion) {
       motion.start ??= now
@@ -832,7 +866,7 @@ export async function createIntroScene(stage, { happyComputer, macDesktop }, sig
     if (released) return
     released = true
     renderer.setAnimationLoop(null)
-    for (const picture of pictures) picture.dispose()
+    for (const picture of pictures()) picture.dispose()
     scene.traverse((object) => {
       if (object instanceof THREE.Light) object.dispose()
       if (!(object instanceof THREE.Mesh)) return
@@ -855,7 +889,7 @@ export async function createIntroScene(stage, { happyComputer, macDesktop }, sig
   await renderer.compileAsync(scene, camera)
   signal.throwIfAborted()
   // Every picture is sent to the screen now, so that changing what it shows takes no time.
-  for (const picture of pictures) renderer.initTexture(picture)
+  for (const picture of pictures()) renderer.initTexture(picture)
   draw()
   renderer.setAnimationLoop(drawFrame)
 
