@@ -176,6 +176,11 @@ function happyComputer() {
   return /** @type {SVGSVGElement} */ (document.querySelector('.intro__happy-computer'))
 }
 
+/** The Mac Desktop, the visitor's whole screen once the Intro has entered it. */
+function macDesktop() {
+  return /** @type {HTMLElement} */ (document.querySelector('.mac-desktop'))
+}
+
 /** Announces that a screen powers on: js/sound.js rings the Startup Chime then, for visitors who turned sound on. */
 function announcePowerOn() {
   document.dispatchEvent(new Event('intro:power-on'))
@@ -226,7 +231,9 @@ async function loadScene() {
   const abandonScene = () => sceneAbandoned.abort()
   stopIntro.signal.addEventListener('abort', abandonScene, { once: true })
   const loading = import('./intro-scene.js')
-    .then(({ createIntroScene }) => createIntroScene(introStage(), happyComputer(), sceneAbandoned.signal))
+    .then(({ createIntroScene }) =>
+      createIntroScene(introStage(), { happyComputer: happyComputer(), macDesktop: macDesktop() }, sceneAbandoned.signal),
+    )
     .catch((error) => {
       if (!sceneAbandoned.signal.aborted) {
         console.warn('The 3D Intro failed to load, so the Short Boot plays instead.', error)
@@ -238,8 +245,9 @@ async function loadScene() {
 }
 
 /**
- * The full Intro: in a dark room, the 3D Macintosh's screen powers on, the view enters it as it flares
- * white, and Isaac's name and Headline are typed into the Mac Window before the rest of the portfolio appears.
+ * The full Intro: in a dark room, the 3D Macintosh's screen powers on and shows the Mac Desktop, the view
+ * enters it as it flares white, and Isaac's name and Headline are typed into the Mac Window before the rest
+ * of the portfolio appears.
  */
 async function playFullIntro() {
   const name = /** @type {HTMLElement} */ (document.querySelector('.ready-title__name'))
@@ -255,9 +263,12 @@ async function playFullIntro() {
   }
   await pause(300)
 
-  // The screen powers on, lighting the room, and the smiling computer greets the visitor.
+  // The screen powers on, lighting the room, and the smiling computer greets the visitor. Then the screen
+  // shows the Mac Desktop they are about to enter: the Menu Bar, and the Mac Window, empty but for a caret.
   await scene.powerOn(announcePowerOn)
-  await pause(1300)
+  await pause(650)
+  scene.showMacDesktop()
+  await pause(650)
   await scene.enter(1400)
 
   // The Mac Window opens, empty but for a caret, and Isaac's name and the Headline are typed into it.

@@ -1,7 +1,8 @@
 // @ts-check
 // The full Intro's 3D scene: a Macintosh in a dark room, lit only by its screen. js/intro.js loads this
-// module, and three.js with it, only when the full Intro plays, and sets the pace: the screen powers on,
-// then the view moves in until the screen fills the browser window and flares white.
+// module, and three.js with it, only when the full Intro plays, and sets the pace: the screen powers on
+// with the smiling computer, shows the Mac Desktop the visitor is about to enter, then the view moves in
+// until the screen fills the browser window and flares white.
 //
 // The Macintosh, its keyboard, and its mouse are original, built here from simple shapes with the
 // proportions of the era's compact Macintosh, in grayscale, with no logo, badge, or other Apple-owned detail.
@@ -40,8 +41,40 @@ const DESK_REACH = DESK_LAYOUT.mouse.x + MOUSE.width / 2 + 0.1
 /** Grayscale only: off-white plastic, darker keys and details, a dim desk. */
 const GRAYS = { plastic: 0xdcdcdc, keys: 0x6e6e6e, button: 0xa8a8a8, panel: 0xb4b4b4, dark: 0x262626, slot: 0x050505, desk: 0x7c7c7c }
 
-/** The screen's picture, in pixels. */
+/** The screen's picture, in pixels, as a classic Macintosh's screen would be. */
 const SCREEN_PIXELS = { width: 512, height: 384 }
+/** The widest the Mac Desktop's picture is drawn, in pixels, for a browser window far narrower than the screen. */
+const MAX_PICTURE_WIDTH = 2048
+/**
+ * The Mac Desktop as the screen shows it, in its pixels, sized like a classic Macintosh's own screen so its
+ * text stays legible in 1-bit: the height of the Menu Bar and the Mac Window's title bar, each with its rule;
+ * the plain bands above and below the title bar's stripes; the close box's size, and how far it is from the
+ * Mac Window's left edge; the size of their text, and the space either side of each title; the size of
+ * Isaac's name; and a picture's rem, the unit the live Mac Window's spacing is drawn in.
+ */
+const MAC_DESKTOP_PIXELS = { menuBar: 17, titleBar: 17, plainBand: 3, closeBox: 11, closeBoxLeft: 8, text: 11, padding: 5, name: 16, rem: 6 }
+/**
+ * How the live Mac Window spaces Isaac's name and the Headline, as css/style.css does: the space above the
+ * name (.mac-window__content's and .ready-title's padding), between the lines, and below the Headline down to
+ * the rule (.ready-title's padding), in rems; each line's height, in its own text's size; and the space either
+ * side of the rule, as a share of the Mac Window's width (.mac-window__content's padding).
+ */
+const READY_TITLE = { above: 4, nameLine: 1.1, between: 0.75, headlineLine: 1.6, below: 2.5, sides: 0.05 }
+/** The caret's size, in ems of the name it stands before, as .intro-typing__caret draws it. */
+const CARET = { width: 0.55, height: 1.1 }
+/** How long the Mac Window's caret shows, and then hides, as it blinks. */
+const CARET_BLINK_MS = 530
+/**
+ * How much of the screen's picture, across its width or its height, the browser window shows once the view
+ * has entered it: a little less than all, so no edge of the Macintosh shows.
+ */
+const ENTERED_SPAN = 0.95
+/**
+ * How far below the top of the screen's picture the browser window's top edge is once the view has entered
+ * it, as a share of the picture's height. The picture's top edge sits in front of where its edges are
+ * measured, so this slight margin is enough to keep the glass out of view.
+ */
+const LANDING_MARGIN = 0.01
 /** The view's vertical angle, in degrees. */
 const FIELD_OF_VIEW = 35
 /** The screen's brightness, from 0, dark, to 1, as it powers on with a flicker, lit from its first frame. */
@@ -51,38 +84,273 @@ const FLICKER_MS = 450
 const GLOW = { forward: 9, around: 1.2, bounce: 0.25 }
 
 /**
- * Draws what the screen shows once it powers on: the smiling computer on a 1-bit dither, in pure black and white.
- * @param {SVGSVGElement} happyComputer the page's smiling computer, drawn into the screen's picture
+ * A picture for the screen, on the 1-bit pattern of the Mac Desktop: a 50% checkerboard of single pixels.
+ * Once drawn, makeOneBit makes it pure black and white.
+ * @param {number} width in pixels
+ * @param {number} height in pixels
  */
-async function screenPicture(happyComputer) {
+function blankPicture(width, height) {
   const picture = document.createElement('canvas')
-  picture.width = SCREEN_PIXELS.width
-  picture.height = SCREEN_PIXELS.height
+  picture.width = width
+  picture.height = height
   const context = /** @type {CanvasRenderingContext2D} */ (picture.getContext('2d', { willReadFrequently: true }))
+  const tile = document.createElement('canvas')
+  tile.width = tile.height = 2
+  const tileContext = /** @type {CanvasRenderingContext2D} */ (tile.getContext('2d'))
+  tileContext.fillStyle = '#fff'
+  tileContext.fillRect(0, 0, 2, 2)
+  tileContext.fillStyle = '#000'
+  tileContext.fillRect(1, 0, 1, 1)
+  tileContext.fillRect(0, 1, 1, 1)
+  context.fillStyle = /** @type {CanvasPattern} */ (context.createPattern(tile, 'repeat'))
+  context.fillRect(0, 0, picture.width, picture.height)
+  return { picture, context }
+}
 
-  // Five pixels to each of the artwork's 32, so its edges fall on whole pixels, and centered on the screen.
-  const size = 32 * 5
-  const artwork = /** @type {SVGSVGElement} */ (happyComputer.cloneNode(true))
+/**
+ * Makes a picture pure black and white, even where a browser smoothed the edges of its artwork and text.
+ * @param {CanvasRenderingContext2D} context
+ */
+function makeOneBit(context) {
+  const pixels = context.getImageData(0, 0, context.canvas.width, context.canvas.height)
+  const { data } = pixels
+  for (let i = 0; i < data.length; i += 4) {
+    data.fill(data[i] + data[i + 1] + data[i + 2] >= 3 * 128 ? 255 : 0, i, i + 3)
+    data[i + 3] = 255
+  }
+  context.putImageData(pixels, 0, 0)
+}
+
+/**
+ * Draws a copy of the page's artwork into a picture, as the page shows it: parts the page hides are left out.
+ * @param {CanvasRenderingContext2D} context
+ * @param {SVGSVGElement} svg
+ * @param {number} x
+ * @param {number} y
+ * @param {number} size
+ */
+async function drawArtwork(context, svg, x, y, size) {
+  const artwork = /** @type {SVGSVGElement} */ (svg.cloneNode(true))
+  const liveParts = [svg, ...svg.querySelectorAll('*')]
+  ;[artwork, ...artwork.querySelectorAll('*')].forEach((part, i) => {
+    if (getComputedStyle(liveParts[i]).display === 'none') part.remove()
+  })
   artwork.setAttribute('width', String(size))
   artwork.setAttribute('height', String(size))
   const image = new Image()
   image.src = `data:image/svg+xml,${encodeURIComponent(new XMLSerializer().serializeToString(artwork))}`
   await image.decode()
-  context.drawImage(image, (picture.width - size) / 2, (picture.height - size) / 2, size, size)
+  context.drawImage(image, x, y, size, size)
+}
 
-  // The dither shows around the artwork, and the artwork is made pure black and white, even where a
-  // browser smooths its edges.
-  const pixels = context.getImageData(0, 0, picture.width, picture.height)
-  const { data } = pixels
-  for (let i = 0; i < data.length; i += 4) {
-    const pixel = i / 4
-    const ditherWhite = (pixel % picture.width + Math.floor(pixel / picture.width)) % 2 === 0
-    const white = data[i + 3] < 128 ? ditherWhite : data[i] + data[i + 1] + data[i + 2] >= 3 * 128
-    data.fill(white ? 255 : 0, i, i + 3)
-    data[i + 3] = 255
-  }
-  context.putImageData(pixels, 0, 0)
+/**
+ * Draws what the screen shows as it powers on: the smiling computer on the 1-bit pattern.
+ * @param {SVGSVGElement} happyComputer the page's smiling computer
+ */
+async function smilingComputerPicture(happyComputer) {
+  const { picture, context } = blankPicture(SCREEN_PIXELS.width, SCREEN_PIXELS.height)
+  // Five pixels to each of the artwork's 32, so its edges fall on whole pixels, and centered on the screen.
+  const size = 32 * 5
+  await drawArtwork(context, happyComputer, (picture.width - size) / 2, (picture.height - size) / 2, size)
+  makeOneBit(context)
   return picture
+}
+
+/**
+ * The part of the screen's picture the browser window shows once the view has entered it, as shares of the
+ * picture's width and height: across, the middle of it; down, from just below its top, so the Mac Desktop's
+ * Menu Bar runs along the top of the window.
+ * @param {number} aspect the browser window's width over its height
+ */
+function landingArea(aspect) {
+  const screenAspect = SCREEN.width / SCREEN.height
+  const width = ENTERED_SPAN * Math.min(1, aspect / screenAspect)
+  return { left: (1 - width) / 2, top: LANDING_MARGIN, width, height: (width * screenAspect) / aspect }
+}
+
+/**
+ * Fills an area of a picture with black or white.
+ * @param {CanvasRenderingContext2D} context
+ * @param {number} x
+ * @param {number} y
+ * @param {number} width
+ * @param {number} height
+ * @param {'#000' | '#fff'} color
+ */
+function fill(context, x, y, width, height, color) {
+  context.fillStyle = color
+  context.fillRect(x, y, width, height)
+}
+
+/**
+ * The bold font a picture draws a live element's text in, at a size in the picture's pixels.
+ * @param {Element} element
+ * @param {number} size
+ */
+function boldFontOf(element, size) {
+  return `bold ${size}px ${getComputedStyle(element).fontFamily}`
+}
+
+/** A live element's text, as it reads. @param {Element} element */
+function textOf(element) {
+  return element.textContent?.trim() ?? ''
+}
+
+/**
+ * Draws the Menu Bar along the top of the part of a picture the browser window shows, as the live one shows
+ * it: its menus from the left, and any the live one pushes to its far end at the right. The title of the
+ * Section being read is shown selected, as the live one marks it. The bar itself runs on to the picture's edges.
+ * @param {CanvasRenderingContext2D} context drawing from the top left of the part the browser window shows
+ * @param {HTMLElement} menuBar the live Menu Bar
+ * @param {number} width the width of the part the browser window shows
+ * @param {{ left: number, top: number, right: number }} edges where the picture's edges are
+ */
+async function drawMenuBar(context, menuBar, width, edges) {
+  const { menuBar: height, text, padding } = MAC_DESKTOP_PIXELS
+  fill(context, edges.left, edges.top, edges.right - edges.left, height - 1 - edges.top, '#fff')
+  fill(context, edges.left, height - 1, edges.right - edges.left, 1, '#000')
+  context.font = boldFontOf(menuBar, text)
+  context.textBaseline = 'middle'
+
+  const menus = [...menuBar.querySelectorAll('li')].filter((menu) => !menu.hidden)
+  /** Each menu's width, and how to draw it from its left edge. */
+  const drawn = menus.map((menu) => {
+    const liveTitle = menu.querySelector('.menu-bar__title')
+    if (!liveTitle) {
+      const artwork = /** @type {SVGSVGElement} */ (menu.querySelector('svg'))
+      return {
+        width: text + 2 * padding,
+        draw: (/** @type {number} */ x) => drawArtwork(context, artwork, x + padding, (height - 1 - text) / 2, text),
+      }
+    }
+    const title = textOf(liveTitle)
+    const titleWidth = Math.ceil(context.measureText(title).width) + 2 * padding
+    const selected = liveTitle.hasAttribute('aria-current')
+    return {
+      width: titleWidth,
+      draw: async (/** @type {number} */ x) => {
+        if (selected) fill(context, x, edges.top, titleWidth, height - 1 - edges.top, '#000')
+        context.fillStyle = selected ? '#fff' : '#000'
+        context.fillText(title, x + padding, height / 2)
+      },
+    }
+  })
+
+  const pushedToFarEnd = menus.findIndex((menu) => parseFloat(getComputedStyle(menu).marginLeft) > 0)
+  const farEnd = pushedToFarEnd < 0 ? menus.length : pushedToFarEnd
+  let left = padding
+  for (const menu of drawn.slice(0, farEnd)) {
+    await menu.draw(left)
+    left += menu.width
+  }
+  let right = width - padding
+  for (const menu of drawn.slice(farEnd).reverse()) {
+    right -= menu.width
+    await menu.draw(right)
+  }
+}
+
+/**
+ * Draws what the screen shows once the Macintosh has started: the Mac Desktop the visitor is about to enter,
+ * as the page shows it when Isaac's name is about to be typed. Original artwork in the screen's own pixels,
+ * it mirrors the live Mac Desktop: the Menu Bar's titles and controls, the pattern around the Mac Window
+ * where there is one, and the Mac Window's title bar, empty below it but for a caret where the name will
+ * be typed. Two pictures, so the caret can blink: with it, and without it.
+ *
+ * It is laid out in the part of the picture the browser window shows once the view has entered the screen,
+ * as the live page is laid out in the window, so the view lands on what the visitor is about to enter. What
+ * reaches the window's edges runs on to the picture's. A window far narrower than the screen shows only the
+ * middle of the picture, so the picture is drawn wider, to keep that middle as wide as on a wide window.
+ * @param {HTMLElement} macDesktop the page's Mac Desktop
+ * @param {{ width: number, height: number }} browserWindow the browser window's size, in CSS pixels
+ */
+async function macDesktopPictures(macDesktop, browserWindow) {
+  const landed = landingArea(browserWindow.width / browserWindow.height)
+  const width = Math.min(MAX_PICTURE_WIDTH, Math.round((SCREEN_PIXELS.width * ENTERED_SPAN) / landed.width))
+  const { picture, context } = blankPicture(width, Math.round((width * SCREEN_PIXELS.height) / SCREEN_PIXELS.width))
+  const windowArea = {
+    left: Math.round(landed.left * width),
+    top: Math.round(landed.top * picture.height),
+    width: Math.round(landed.width * width),
+  }
+  const edges = {
+    left: -windowArea.left,
+    top: -windowArea.top,
+    right: width - windowArea.left,
+    bottom: picture.height - windowArea.top,
+  }
+  context.translate(windowArea.left, windowArea.top)
+  const scale = windowArea.width / browserWindow.width
+  const { menuBar: menuBarHeight, titleBar: titleBarHeight, plainBand, closeBox, closeBoxLeft, text, padding, name: nameSize, rem } =
+    MAC_DESKTOP_PIXELS
+  const liveElement = (/** @type {string} */ selector) => /** @type {HTMLElement} */ (macDesktop.querySelector(selector))
+
+  const menuBar = liveElement('.menu-bar')
+  await drawMenuBar(context, menuBar, windowArea.width, edges)
+
+  // The Mac Window, as far in from the window's edges as the live one, in proportion, with a border and
+  // drop shadow where the live one has them.
+  const liveMacWindow = liveElement('.mac-window')
+  const box = liveMacWindow.getBoundingClientRect()
+  const outer = {
+    left: box.left <= 0 ? edges.left : Math.round(box.left * scale),
+    right: box.right >= browserWindow.width ? edges.right : Math.round(box.right * scale),
+    top: menuBarHeight + Math.max(0, Math.round((box.top - menuBar.getBoundingClientRect().bottom) * scale)),
+    bottom: box.bottom >= browserWindow.height ? edges.bottom : Math.round(box.bottom * scale),
+  }
+  const border = parseFloat(getComputedStyle(liveMacWindow).borderTopWidth) > 0 ? 1 : 0
+  if (border) {
+    fill(context, outer.left + 1, outer.top + 1, outer.right - outer.left, outer.bottom - outer.top, '#000')
+    fill(context, outer.left, outer.top, outer.right - outer.left, outer.bottom - outer.top, '#000')
+  }
+  const macWindow = { left: outer.left + border, right: outer.right - border, top: outer.top + border, bottom: outer.bottom - border }
+  fill(context, macWindow.left, macWindow.top, macWindow.right - macWindow.left, macWindow.bottom - macWindow.top, '#fff')
+  // The part of it the browser window shows.
+  const macWindowSeen = { left: Math.max(macWindow.left, 0), right: Math.min(macWindow.right, windowArea.width) }
+
+  // The title bar: stripes, with plain bands above and below them, the close box, and the title.
+  const titleBarRule = macWindow.top + titleBarHeight - 1
+  for (let y = macWindow.top + plainBand; y < titleBarRule - plainBand; y += 2) {
+    fill(context, macWindow.left, y, macWindow.right - macWindow.left, 1, '#000')
+  }
+  fill(context, macWindow.left, titleBarRule, macWindow.right - macWindow.left, 1, '#000')
+  const closeBoxAt = { x: macWindowSeen.left + closeBoxLeft, y: macWindow.top + Math.round((titleBarHeight - 1 - closeBox) / 2) }
+  fill(context, closeBoxAt.x - 1, closeBoxAt.y - 1, closeBox + 2, closeBox + 2, '#fff')
+  fill(context, closeBoxAt.x, closeBoxAt.y, closeBox, closeBox, '#000')
+  fill(context, closeBoxAt.x + 1, closeBoxAt.y + 1, closeBox - 2, closeBox - 2, '#fff')
+  const liveTitle = liveElement('.mac-window__title')
+  const title = textOf(liveTitle)
+  context.font = boldFontOf(liveTitle, text)
+  const titleWidth = Math.ceil(context.measureText(title).width) + 2 * padding
+  const middle = (macWindow.left + macWindow.right) / 2
+  fill(context, Math.round(middle - titleWidth / 2), macWindow.top + 1, titleWidth, titleBarHeight - 3, '#fff')
+  context.fillStyle = '#000'
+  context.textAlign = 'center'
+  context.fillText(title, middle, macWindow.top + (titleBarHeight - 1) / 2)
+
+  // Below it, the empty space where Isaac's name and the Headline will be typed, and its rule. The caret
+  // stands where the name's first letter will be, the name being centered.
+  const contentTop = macWindow.top + titleBarHeight
+  const { above, nameLine, between, headlineLine, below, sides } = READY_TITLE
+  const ruleY = contentTop + Math.round(above * rem + nameLine * nameSize + between * rem + headlineLine * text + below * rem)
+  const ruleInset = Math.round((macWindowSeen.right - macWindowSeen.left) * sides)
+  fill(context, macWindowSeen.left + ruleInset, ruleY, macWindowSeen.right - macWindowSeen.left - 2 * ruleInset, 1, '#000')
+  const liveName = liveElement('.ready-title__name')
+  context.font = boldFontOf(liveName, nameSize)
+  const caret = {
+    x: windowArea.left + Math.round(middle - context.measureText(textOf(liveName)).width / 2),
+    y: windowArea.top + contentTop + above * rem,
+    width: Math.round(CARET.width * nameSize),
+    height: Math.round(CARET.height * nameSize),
+  }
+  makeOneBit(context)
+
+  const withCaret = /** @type {HTMLCanvasElement} */ (picture.cloneNode())
+  const withCaretContext = /** @type {CanvasRenderingContext2D} */ (withCaret.getContext('2d'))
+  withCaretContext.drawImage(picture, 0, 0)
+  withCaretContext.fillStyle = '#000'
+  withCaretContext.fillRect(caret.x, caret.y, caret.width, caret.height)
+  return { withCaret, withoutCaret: picture }
 }
 
 /**
@@ -194,7 +462,7 @@ function part(geometry, material, [x, y, z]) {
 /**
  * The compact Macintosh, its screen dark: a tall case on a plinth, its front bezel joined to the rear
  * housing at a seam, with the screen set back in a sloping opening, and a floppy slot and vent grille below it.
- * @param {HTMLCanvasElement} picture what its screen shows once it powers on
+ * @param {THREE.Texture} picture what its screen shows once it powers on
  */
 function macintosh(picture) {
   const group = new THREE.Group()
@@ -237,13 +505,9 @@ function macintosh(picture) {
   const tube = new THREE.Mesh(curvedGlass(GLASS.width, GLASS.height), new THREE.MeshLambertMaterial({ color: GRAYS.dark }))
   tube.position.set(0, middle + screenY, glassZ)
 
-  const texture = new THREE.CanvasTexture(picture)
-  texture.colorSpace = THREE.SRGBColorSpace
-  // Crisp 1-bit pixels up close, a soft gray from afar.
-  texture.magFilter = THREE.NearestFilter
   // Drawn in front of the glass just behind it however far off the view is, so the glass never shows through.
   const screenMaterial = new THREE.MeshBasicMaterial({
-    map: texture,
+    map: picture,
     color: 0x000000,
     polygonOffset: true,
     polygonOffsetFactor: -1,
@@ -362,7 +626,7 @@ function mouse(front) {
 /**
  * The Macintosh, its screen dark, with its keyboard and mouse on a desk, and the screen's glow ready to
  * light them.
- * @param {HTMLCanvasElement} picture what its screen shows once it powers on
+ * @param {THREE.Texture} picture what its screen shows once it powers on
  */
 function macintoshOnDesk(picture) {
   const { group, front, screenCenter, screenMaterial } = macintosh(picture)
@@ -400,18 +664,40 @@ function macintoshOnDesk(picture) {
     around.intensity = level * GLOW.around
     for (const bounce of bounces) bounce.intensity = level * GLOW.bounce
   }
-  return { setup, screenCenter, front, lightScreen }
+  /** @param {THREE.Texture} picture what the screen shows from now on */
+  const showOnScreen = (picture) => {
+    screenMaterial.map = picture
+  }
+  return { setup, screenCenter, front, lightScreen, showOnScreen }
+}
+
+/**
+ * A picture for the screen, drawn as it is: crisp 1-bit pixels up close, a soft gray from afar.
+ * @param {HTMLCanvasElement} picture
+ */
+function screenTexture(picture) {
+  const texture = new THREE.CanvasTexture(picture)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.magFilter = THREE.NearestFilter
+  return texture
 }
 
 /**
  * Builds the scene in a canvas over the whole stage, dark until its screen powers on.
  * @param {HTMLElement} stage where the canvas goes
- * @param {SVGSVGElement} happyComputer the smiling computer the screen shows
+ * @param {{ happyComputer: SVGSVGElement, macDesktop: HTMLElement }} page what the screen shows from the page:
+ *   the smiling computer as it powers on, then the Mac Desktop
  * @param {AbortSignal} signal ends the scene, wherever it has got to, and releases it
  */
-export async function createIntroScene(stage, happyComputer, signal) {
+export async function createIntroScene(stage, { happyComputer, macDesktop }, signal) {
   signal.throwIfAborted()
-  const picture = await screenPicture(happyComputer)
+  const smilingComputer = screenTexture(await smilingComputerPicture(happyComputer))
+  const drawnMacDesktop = await macDesktopPictures(macDesktop, { width: stage.clientWidth, height: stage.clientHeight })
+  const macDesktopPicture = {
+    withCaret: screenTexture(drawnMacDesktop.withCaret),
+    withoutCaret: screenTexture(drawnMacDesktop.withoutCaret),
+  }
+  const pictures = [smilingComputer, macDesktopPicture.withCaret, macDesktopPicture.withoutCaret]
   signal.throwIfAborted()
 
   const canvas = document.createElement('canvas')
@@ -426,7 +712,7 @@ export async function createIntroScene(stage, happyComputer, signal) {
   renderer.shadowMap.needsUpdate = true
 
   const scene = new THREE.Scene()
-  const { setup, screenCenter, front, lightScreen } = macintoshOnDesk(picture)
+  const { setup, screenCenter, front, lightScreen, showOnScreen } = macintoshOnDesk(smilingComputer)
   const camera = new THREE.PerspectiveCamera(FIELD_OF_VIEW, 1, 0.01, 100)
   // Washes the whole view white as it enters the screen.
   const flare = new THREE.Mesh(
@@ -448,7 +734,6 @@ export async function createIntroScene(stage, happyComputer, signal) {
     const slope = Math.tan(THREE.MathUtils.degToRad(FIELD_OF_VIEW / 2))
     const framing = (/** @type {number} */ width, /** @type {number} */ height) => ({
       whole: Math.max(height / 2 / slope, width / 2 / (slope * camera.aspect)),
-      covered: Math.min(height / 2 / slope, width / 2 / (slope * camera.aspect)),
     })
     // From a little above, looking down onto the desk, with the Macintosh, keyboard, and mouse in view: the
     // Macintosh's height at its front, and the desk's reach to either side at the keyboard's front edge,
@@ -459,24 +744,39 @@ export async function createIntroScene(stage, happyComputer, signal) {
       lookY: CASE.height * 0.4,
       distance: Math.max(front + framing(0, CASE.height * 1.45).whole, nearest + framing(DESK_REACH * 2.2, 0).whole),
     }
-    // Where the screen covers the whole window, with a margin, so that no edge of the Macintosh shows. Its
-    // edges are measured where they are, behind the glass's bulge.
-    const covered = screenCenter.z - GLASS.bulge + framing(SCREEN.width, SCREEN.height).covered * 0.95
+    // Where the screen covers the whole window, showing the part of its picture the Mac Desktop is laid out
+    // in, so that no edge of the Macintosh shows. Its edges are measured where they are, behind the glass's bulge.
+    const landed = landingArea(camera.aspect)
+    const covered = screenCenter.z - GLASS.bulge + (landed.height * SCREEN.height) / 2 / slope
+    const landing = screenCenter.y + SCREEN.height * (0.5 - landed.top - landed.height / 2)
     const glass = screenCenter.z + 0.05
 
     const eased = THREE.MathUtils.smoothstep(approach, 0, 1)
-    // Level with, and facing, the screen's center well before it covers the window.
+    // Level with, and facing, where it lands on the screen well before it covers the window.
     const level = Math.min(eased * 2, 1)
-    const y = THREE.MathUtils.lerp(far.y, screenCenter.y, level)
+    const y = THREE.MathUtils.lerp(far.y, landing, level)
     const distance = THREE.MathUtils.lerp(THREE.MathUtils.lerp(far.distance, covered, eased), glass, push * push)
     camera.position.set(0, y, distance)
-    camera.lookAt(0, THREE.MathUtils.lerp(far.lookY, screenCenter.y, level), 0)
+    camera.lookAt(0, THREE.MathUtils.lerp(far.lookY, landing, level), 0)
     flare.material.opacity = THREE.MathUtils.smoothstep(push, 0, 1)
   }
 
   /** @type {{ ms: number, step: (progress: number) => void, done: () => void, start?: number } | undefined} */
   let motion
   let drawnSize = ''
+  /** @type {number | undefined} when the screen started showing the Mac Desktop, by the page's clock */
+  let macDesktopShownAt
+  let shown = smilingComputer
+
+  /**
+   * What the screen shows at a moment: the smiling computer, then the Mac Desktop, its caret blinking until
+   * the screen covers the window, then shown, as the live Mac Window's is when typing starts.
+   */
+  const pictureAt = (/** @type {number} */ now) => {
+    if (macDesktopShownAt === undefined) return smilingComputer
+    const caretShown = approach === 1 || Math.floor(Math.max(now - macDesktopShownAt, 0) / CARET_BLINK_MS) % 2 === 0
+    return caretShown ? macDesktopPicture.withCaret : macDesktopPicture.withoutCaret
+  }
 
   /** Matches the drawing to the canvas's size on screen, and tells whether it had to change. */
   const fitCanvas = () => {
@@ -495,10 +795,10 @@ export async function createIntroScene(stage, happyComputer, signal) {
     renderer.render(scene, camera)
   }
 
-  /** Each animation frame, draws the motion playing, if any, or the scene resized. */
+  /** Each animation frame, draws the motion playing, if any, or the scene resized, or the screen's picture changed. */
   const drawFrame = (/** @type {number} */ now) => {
     const resized = fitCanvas()
-    if (!motion && !resized) return
+    const moved = Boolean(motion)
     if (motion) {
       motion.start ??= now
       const progress = Math.min((now - motion.start) / motion.ms, 1)
@@ -508,7 +808,10 @@ export async function createIntroScene(stage, happyComputer, signal) {
         motion = undefined
       }
     }
-    draw()
+    const picture = pictureAt(now)
+    const repictured = picture !== shown
+    if (repictured) showOnScreen((shown = picture))
+    if (moved || resized || repictured) draw()
   }
 
   /**
@@ -529,6 +832,7 @@ export async function createIntroScene(stage, happyComputer, signal) {
     if (released) return
     released = true
     renderer.setAnimationLoop(null)
+    for (const picture of pictures) picture.dispose()
     scene.traverse((object) => {
       if (object instanceof THREE.Light) object.dispose()
       if (!(object instanceof THREE.Mesh)) return
@@ -550,6 +854,8 @@ export async function createIntroScene(stage, happyComputer, signal) {
   fitCanvas()
   await renderer.compileAsync(scene, camera)
   signal.throwIfAborted()
+  // Every picture is sent to the screen now, so that changing what it shows takes no time.
+  for (const picture of pictures) renderer.initTexture(picture)
   draw()
   renderer.setAnimationLoop(drawFrame)
 
@@ -567,6 +873,11 @@ export async function createIntroScene(stage, happyComputer, signal) {
         const from = Math.floor(at)
         lightScreen(THREE.MathUtils.lerp(FLICKER[from], FLICKER[Math.min(from + 1, FLICKER.length - 1)], at - from))
       })
+    },
+
+    /** The screen shows the Mac Desktop the visitor is about to enter, its caret blinking. */
+    showMacDesktop() {
+      macDesktopShownAt = performance.now()
     },
 
     /**

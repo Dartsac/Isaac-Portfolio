@@ -88,15 +88,19 @@ function watchThreeJsRequests(page) {
  *   the screen while the whole Macintosh is in view
  */
 
+/** How many cells across and down a coarse picture of an area has (see lookAt). */
+const COARSE_GRID = 12
+
 /**
  * Watches the Intro's 3D scene from the moment the page starts loading: each WebGL context the page makes,
  * and what the scene's canvas shows each time it is drawn. So that what was drawn can be read back, the
  * page's WebGL contexts keep their drawing between frames. The page's window.lookAtIntroScene() tells how the
- * scene looks at any moment, such as when a sound starts.
+ * scene looks at any moment, such as when a sound starts, and lookAtScreenLanding how the screen looked as
+ * the view landed on it.
  * @param {import('@playwright/test').Page} page
  */
 async function watchIntroScene(page) {
-  await page.addInitScript(() => {
+  await page.addInitScript((grid) => {
     /** @type {{ contexts: (WebGLRenderingContext | WebGL2RenderingContext)[], frames: IntroSceneFrame[], poweredOnAt?: number }} */
     const watched = { contexts: [], frames: [] }
     Object.assign(window, { introSceneWatched: watched })
@@ -116,8 +120,9 @@ async function watchIntroScene(page) {
     HTMLCanvasElement.prototype.getContext = /** @type {any} */ (keepingDrawing)
 
     // A coarse copy of each drawing is enough to tell a dark room, a lit screen, and a white flare apart,
-    // and a few of its pixels, copied as they are, whether only the 1-bit screen shows. More of its pixels,
-    // copied as they are, tell whether any shows color.
+    // and a few of its pixels, copied as they are, whether only the 1-bit screen shows. All of them tell
+    // whether it shows black as well as white: its picture may be mostly white, with thin black lines a few
+    // pixels can miss. More of its pixels, copied as they are, tell whether any shows color.
     const size = 24
     const graySize = 64
     const smallCanvas = (/** @type {number} */ side) =>
@@ -129,6 +134,48 @@ async function watchIntroScene(page) {
     pixelsAt.imageSmoothingEnabled = false
     const grayPixelsAt = smallCanvas(graySize)
     grayPixelsAt.imageSmoothingEnabled = false
+    /** Copies a drawing, whole, into a canvas, sized to it. @param {CanvasRenderingContext2D} into @param {HTMLCanvasElement} scene */
+    const copyWhole = (into, scene) => {
+      if (into.canvas.width !== scene.width || into.canvas.height !== scene.height) {
+        Object.assign(into.canvas, { width: scene.width, height: scene.height })
+      }
+      into.drawImage(scene, 0, 0)
+    }
+    const whole = smallCanvas(0)
+    /** Whether a drawing shows some pure black and some pure white. @param {HTMLCanvasElement} scene */
+    const showsBlackAndWhite = (scene) => {
+      copyWhole(whole, scene)
+      const pixels = whole.getImageData(0, 0, scene.width, scene.height).data
+      let [black, white] = [false, false]
+      for (let i = 0; i < pixels.length && !(black && white); i += 4) {
+        const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3
+        black ||= brightness <= 8
+        white ||= brightness >= 247
+      }
+      return black && white
+    }
+    // The last drawing in which the screen alone covered the browser window: where the view landed on it.
+    const landing = smallCanvas(0)
+    /**
+     * A coarse picture of an area of the window as the view landed on the screen, as lookAt takes of the page.
+     * @param {{ x: number, y: number, width: number, height: number }} clip
+     */
+    const lookAtLanding = ({ x, y, width, height }) => {
+      if (landing.canvas.width === 0) return undefined
+      const scale = landing.canvas.width / innerWidth
+      const area = { x: Math.round(x * scale), y: Math.round(y * scale), width: Math.round(width * scale), height: Math.round(height * scale) }
+      const pixels = landing.getImageData(area.x, area.y, area.width, area.height).data
+      const sums = new Array(grid * grid).fill(0)
+      const counts = new Array(grid * grid).fill(0)
+      for (let i = 0; i < pixels.length; i += 4) {
+        const [column, row] = [(i / 4) % area.width, Math.floor(i / 4 / area.width)]
+        const cell = Math.floor((row * grid) / area.height) * grid + Math.floor((column * grid) / area.width)
+        sums[cell] += (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3
+        counts[cell]++
+      }
+      return { brightness: sums.map((sum, cell) => sum / counts[cell]) }
+    }
+    Object.assign(window, { lookAtIntroSceneLanding: lookAtLanding })
     /** How the scene's latest drawing looks, if there is one. */
     const look = () => {
       const scene = document.querySelector('[data-testid="intro-scene"]')
@@ -146,9 +193,7 @@ async function watchIntroScene(page) {
       }
       pixelsAt.drawImage(scene, 0, 0, size, size)
       const levels = [...pixelsAt.getImageData(0, 0, size, size).data].filter((_, i) => i % 4 !== 3)
-      const black = levels.filter((level) => level <= 8).length
-      const white = levels.filter((level) => level >= 247).length
-      const oneBit = black > 0 && white > 0 && black + white === levels.length
+      const oneBit = levels.every((level) => level <= 8 || level >= 247) && showsBlackAndWhite(scene)
       grayPixelsAt.drawImage(scene, 0, 0, graySize, graySize)
       const grayPixels = grayPixelsAt.getImageData(0, 0, graySize, graySize).data
       let gray = true
@@ -158,6 +203,7 @@ async function watchIntroScene(page) {
       }
       const box = scene.getBoundingClientRect()
       const fillsWindow = box.left <= 0 && box.top <= 0 && box.right >= innerWidth && box.bottom >= innerHeight
+      if (oneBit && fillsWindow) copyWhole(landing, scene)
       return { time: performance.now(), darkest, brightest, brightestBelow, fillsWindow, oneBit, gray }
     }
     Object.assign(window, { lookAtIntroScene: look })
@@ -178,7 +224,23 @@ async function watchIntroScene(page) {
         })
       }
     }
-  })
+  }, COARSE_GRID)
+}
+
+/**
+ * Looks at an area of the browser window as the view landed on the Intro's 3D screen: the last drawing in
+ * which the screen alone covered the window, before it flared (see watchIntroScene).
+ * @param {import('@playwright/test').Page} page
+ * @param {ScreenArea} [clip] the whole window if not given
+ * @returns {Promise<{ brightness: number[] } | undefined>} brightness: a coarse picture of the area, as lookAt
+ *   takes of the page; nothing if the screen never covered the window
+ */
+async function lookAtScreenLanding(page, clip) {
+  const area = clip ?? { x: 0, y: 0, ...(/** @type {{ width: number, height: number }} */ (page.viewportSize())) }
+  return page.evaluate(
+    (area) => /** @type {{ lookAtIntroSceneLanding: (clip: ScreenArea) => { brightness: number[] } | undefined }} */ (/** @type {unknown} */ (window)).lookAtIntroSceneLanding(area),
+    area,
+  )
 }
 
 /**
@@ -416,13 +478,14 @@ async function pdfText(data) {
  * Looks at an area of the screen as a visitor would see it.
  * @param {import('@playwright/test').Page} page
  * @param {ScreenArea} clip
+ * @param {{ style?: string }} [options] style: a stylesheet applied only while looking
  * @returns {Promise<{ colorfulness: number, brightness: number[] }>}
  *   colorfulness: the fraction of pixels, from 0 to 1, showing color rather than black, white, or gray;
  *   brightness: the average brightness of each cell in a 12 × 12 grid, a coarse picture of the area.
  */
-async function lookAt(page, clip) {
-  const screenshot = await page.screenshot({ clip })
-  return page.evaluate(async (base64) => {
+async function lookAt(page, clip, { style } = {}) {
+  const screenshot = await page.screenshot({ clip, style })
+  return page.evaluate(async ([base64, grid]) => {
     const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0))
     const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }))
     const { width, height } = bitmap
@@ -430,7 +493,6 @@ async function lookAt(page, clip) {
     context.drawImage(bitmap, 0, 0)
     const pixels = context.getImageData(0, 0, width, height).data
 
-    const grid = 12
     const sums = new Array(grid * grid).fill(0)
     const counts = new Array(grid * grid).fill(0)
     let colored = 0
@@ -447,7 +509,7 @@ async function lookAt(page, clip) {
       }
     }
     return { colorfulness: colored / (width * height), brightness: sums.map((sum, cell) => sum / counts[cell]) }
-  }, screenshot.toString('base64'))
+  }, /** @type {const} */ ([screenshot.toString('base64'), COARSE_GRID]))
 }
 
 /**
@@ -548,6 +610,7 @@ module.exports = {
   watchThreeJsRequests,
   watchIntroScene,
   introScene,
+  lookAtScreenLanding,
   SECTIONS,
   PHONE_NUMBER,
   PHONES,

@@ -13,10 +13,15 @@ const {
   skipControl,
   introSoundControl,
   largestColorDifference,
+  lookAt,
+  similarity,
+  menuBar,
+  boxOf,
   THREE_JS,
   watchThreeJsRequests,
   watchIntroScene,
   introScene,
+  lookAtScreenLanding,
 } = require('./support/portfolio')
 
 const NAME = 'Isaac Dobson'
@@ -375,6 +380,49 @@ for (const layout of LAYOUTS) {
       const nameDone = typed.findIndex(({ line, text }) => line === 'name' && text === NAME)
       const headlineStarts = typed.findIndex(({ line, text }) => line === 'headline' && text.length > 0)
       expect(headlineStarts, 'the Headline is typed after the name').toBeGreaterThan(nameDone)
+    })
+
+    test('shows on its screen the Mac Desktop the view then lands on: the Menu Bar and an empty Mac Window', async ({
+      page,
+    }) => {
+      await watchIntroScene(page)
+      await visitPortfolio(page)
+
+      // The Mac Desktop the visitor lands on, as typing starts, seen without the Intro fading over it.
+      await page.waitForFunction(() => document.documentElement.dataset.introPhase === 'typing', undefined, {
+        polling: 'raf',
+        timeout: 15_000,
+      })
+      const screen = /** @type {{ width: number, height: number }} */ (page.viewportSize())
+      const landedOn = await lookAt(page, { x: 0, y: 0, ...screen }, { style: '.intro { visibility: hidden !important; }' })
+      await expectReady(page, { timeout: 15_000 })
+
+      const screenAsLanded = await lookAtScreenLanding(page)
+      expect(screenAsLanded, 'the screen alone covers the whole browser window').toBeDefined()
+      const alike = similarity(/** @type {{ brightness: number[] }} */ (screenAsLanded).brightness, landedOn.brightness)
+      expect(alike, 'how alike the screen and the Mac Desktop look').toBeGreaterThan(0.7)
+    })
+
+    test('lands on its screen’s Menu Bar reaching both ends of the window, from the first menu to the sound control, as the live one does', async ({
+      page,
+    }) => {
+      await watchIntroScene(page)
+      await visitPortfolio(page)
+      await expectReady(page, { timeout: 15_000 })
+
+      // The upper half of the live Menu Bar, at each end of the window, where its first menu and its sound
+      // control are. Something is drawn there when any cell is darker than plain white.
+      const bar = await boxOf(menuBar(page))
+      const end = { y: 0, width: bar.width * 0.1, height: bar.height / 2 }
+      for (const { name, area } of [
+        { name: 'left', area: { x: 0, ...end } },
+        { name: 'right', area: { x: bar.width * 0.9, ...end } },
+      ]) {
+        const live = await lookAt(page, area, { style: '.crt { display: none; }' })
+        expect(Math.min(...live.brightness), `something drawn at the live Menu Bar’s ${name} end`).toBeLessThan(250)
+        const landed = /** @type {{ brightness: number[] }} */ (await lookAtScreenLanding(page, area))
+        expect(Math.min(...landed.brightness), `something drawn at the 3D Menu Bar’s ${name} end`).toBeLessThan(250)
+      }
     })
 
     test('is dark until its screen powers on, then lit by the screen’s glow, in shades of gray', async ({ page }) => {
