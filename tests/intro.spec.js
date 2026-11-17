@@ -297,6 +297,36 @@ test.describe('Intro for a first-time visitor', () => {
     await expect(section(page, 'Contact')).toBeInViewport()
   })
 
+  test('downloads nothing for its 3D scene but three.js and the script that builds it', async ({ page, browser, baseURL }) => {
+    /**
+     * The address of each file a page downloads from now on.
+     * @param {import('@playwright/test').Page} page
+     */
+    const watchDownloads = (page) => {
+      /** @type {Set<string>} */
+      const downloads = new Set()
+      page.on('request', (request) => {
+        if (/^https?:/.test(request.url())) downloads.add(request.url())
+      })
+      return downloads
+    }
+    const introDownloads = watchDownloads(page)
+    await visitPortfolio(page)
+    await expectReady(page, { timeout: 15_000 })
+    await page.waitForLoadState('networkidle')
+
+    // The same portfolio without any Intro, for a visitor who prefers reduced motion.
+    const withoutIntro = await browser.newPage({ baseURL, reducedMotion: 'reduce' })
+    const readyStateDownloads = watchDownloads(withoutIntro)
+    await visitPortfolio(withoutIntro)
+    await withoutIntro.waitForLoadState('networkidle')
+    await withoutIntro.close()
+
+    const forTheScene = [...introDownloads].filter((url) => !readyStateDownloads.has(url))
+    expect(forTheScene.length, 'downloads for the 3D scene').toBeGreaterThan(0)
+    for (const url of forTheScene) expect(url, 'downloaded for the 3D scene').toMatch(new RegExp(`${THREE_JS.source}|${INTRO_SCENE.source}`))
+  })
+
   test('keeps Isaac’s name and Headline available as text throughout, even while they are typed', async ({ page }) => {
     // Read once, at that moment: a retrying assertion could pass only after the Intro had ended.
     const expectNameAndHeadlineAsText = async () => {
@@ -347,6 +377,20 @@ for (const layout of LAYOUTS) {
       expect(headlineStarts, 'the Headline is typed after the name').toBeGreaterThan(nameDone)
     })
 
+    test('is dark until its screen powers on, then lit by the screen’s glow, in shades of gray', async ({ page }) => {
+      await watchIntroScene(page)
+      await visitPortfolio(page)
+
+      await expectFullIntroStarted(page)
+      await expectReady(page, { timeout: 15_000 })
+
+      const { framesBeforePowerOn, darkUntilPowerOn, litBelowScreen, gray } = await introScene(page)
+      expect(framesBeforePowerOn, 'frames drawn before the screen powers on').toBeGreaterThan(0)
+      expect(darkUntilPowerOn, 'nothing shows until the screen powers on').toBe(true)
+      expect(litBelowScreen, 'the screen lights the keyboard and desk below it as it powers on').toBe(true)
+      expect(gray, 'every frame drawn is in shades of gray').toBe(true)
+    })
+
     test('ends exactly where skipping it does', async ({ page }) => {
       await visitPortfolio(page)
       await expectReady(page, { timeout: 15_000 })
@@ -371,6 +415,21 @@ for (const layout of LAYOUTS) {
     })
   })
 }
+
+test.describe('Intro for a first-time visitor on a window far wider than tall', () => {
+  // Wide enough that an edge left uncovered is more than the sampling of the scene's drawing can miss.
+  test.use({ viewport: { width: 2600, height: 400 } })
+
+  test('enters the screen until it alone covers the whole window, before it flares white', async ({ page }) => {
+    await watchIntroScene(page)
+    await visitPortfolio(page)
+
+    await expectReady(page, { timeout: 15_000 })
+    const { screenCoveredWindow, flaredOverWindow } = await introScene(page)
+    expect(screenCoveredWindow, 'the screen alone covers the whole browser window').toBe(true)
+    expect(flaredOverWindow, 'then flares white over it').toBe(true)
+  })
+})
 
 /**
  * Ways a visitor ends the Intro before it has played out, while the Intro has focus or the pointer. (The

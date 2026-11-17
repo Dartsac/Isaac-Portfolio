@@ -83,6 +83,9 @@ function watchThreeJsRequests(page) {
  * @property {boolean} fillsWindow whether the scene's canvas covered the whole browser window
  * @property {boolean} oneBit whether every pixel looked at was pure black or pure white, with some of each:
  *   the screen's 1-bit picture alone, with no shaded Macintosh, dark room, or flare blending over it
+ * @property {boolean} gray whether every pixel looked at was a shade of gray, with no color
+ * @property {number} brightestBelow the brightness, from 0 to 255, of the brightest part of its lower 40%, below
+ *   the screen while the whole Macintosh is in view
  */
 
 /**
@@ -94,9 +97,11 @@ function watchThreeJsRequests(page) {
  */
 async function watchIntroScene(page) {
   await page.addInitScript(() => {
-    /** @type {{ contexts: (WebGLRenderingContext | WebGL2RenderingContext)[], frames: IntroSceneFrame[] }} */
+    /** @type {{ contexts: (WebGLRenderingContext | WebGL2RenderingContext)[], frames: IntroSceneFrame[], poweredOnAt?: number }} */
     const watched = { contexts: [], frames: [] }
     Object.assign(window, { introSceneWatched: watched })
+    // When the screen powers on, as js/sound.js hears it to ring the Startup Chime.
+    document.addEventListener('intro:power-on', () => (watched.poweredOnAt ??= performance.now()))
 
     const getContext = HTMLCanvasElement.prototype.getContext
     /** @this {HTMLCanvasElement} @param {string} type @param {any} [attributes] */
@@ -111,15 +116,19 @@ async function watchIntroScene(page) {
     HTMLCanvasElement.prototype.getContext = /** @type {any} */ (keepingDrawing)
 
     // A coarse copy of each drawing is enough to tell a dark room, a lit screen, and a white flare apart,
-    // and a few of its pixels, copied as they are, whether only the 1-bit screen shows.
+    // and a few of its pixels, copied as they are, whether only the 1-bit screen shows. More of its pixels,
+    // copied as they are, tell whether any shows color.
     const size = 24
-    const smallCanvas = () =>
+    const graySize = 64
+    const smallCanvas = (/** @type {number} */ side) =>
       /** @type {CanvasRenderingContext2D} */ (
-        Object.assign(document.createElement('canvas'), { width: size, height: size }).getContext('2d', { willReadFrequently: true })
+        Object.assign(document.createElement('canvas'), { width: side, height: side }).getContext('2d', { willReadFrequently: true })
       )
-    const copy = smallCanvas()
-    const pixelsAt = smallCanvas()
+    const copy = smallCanvas(size)
+    const pixelsAt = smallCanvas(size)
     pixelsAt.imageSmoothingEnabled = false
+    const grayPixelsAt = smallCanvas(graySize)
+    grayPixelsAt.imageSmoothingEnabled = false
     /** How the scene's latest drawing looks, if there is one. */
     const look = () => {
       const scene = document.querySelector('[data-testid="intro-scene"]')
@@ -128,19 +137,28 @@ async function watchIntroScene(page) {
       const pixels = copy.getImageData(0, 0, size, size).data
       let darkest = 255
       let brightest = 0
+      let brightestBelow = 0
       for (let i = 0; i < pixels.length; i += 4) {
         const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3
         darkest = Math.min(darkest, brightness)
         brightest = Math.max(brightest, brightness)
+        if (i / 4 >= size * size * 0.6) brightestBelow = Math.max(brightestBelow, brightness)
       }
       pixelsAt.drawImage(scene, 0, 0, size, size)
       const levels = [...pixelsAt.getImageData(0, 0, size, size).data].filter((_, i) => i % 4 !== 3)
       const black = levels.filter((level) => level <= 8).length
       const white = levels.filter((level) => level >= 247).length
       const oneBit = black > 0 && white > 0 && black + white === levels.length
+      grayPixelsAt.drawImage(scene, 0, 0, graySize, graySize)
+      const grayPixels = grayPixelsAt.getImageData(0, 0, graySize, graySize).data
+      let gray = true
+      for (let i = 0; i < grayPixels.length && gray; i += 4) {
+        const channels = [grayPixels[i], grayPixels[i + 1], grayPixels[i + 2]]
+        gray = Math.max(...channels) - Math.min(...channels) <= 2
+      }
       const box = scene.getBoundingClientRect()
       const fillsWindow = box.left <= 0 && box.top <= 0 && box.right >= innerWidth && box.bottom >= innerHeight
-      return { time: performance.now(), darkest, brightest, fillsWindow, oneBit }
+      return { time: performance.now(), darkest, brightest, brightestBelow, fillsWindow, oneBit, gray }
     }
     Object.assign(window, { lookAtIntroScene: look })
 
@@ -169,14 +187,23 @@ async function watchIntroScene(page) {
  */
 async function introScene(page) {
   return page.evaluate(() => {
-    const { contexts, frames } = /** @type {{ introSceneWatched: { contexts: WebGLRenderingContext[], frames: IntroSceneFrame[] } }} */ (
+    const { contexts, frames, poweredOnAt } = /** @type {{ introSceneWatched: { contexts: WebGLRenderingContext[], frames: IntroSceneFrame[], poweredOnAt?: number } }} */ (
       /** @type {unknown} */ (window)
     ).introSceneWatched
+    const beforePowerOn = frames.filter(({ time }) => poweredOnAt === undefined || time < poweredOnAt)
     return {
       contextsMade: contexts.length,
       contextsReleased: contexts.filter((context) => context.isContextLost()).length,
       /** whether the scene was ever drawn */
       drawn: frames.length > 0,
+      /** how many frames were drawn before the screen powered on */
+      framesBeforePowerOn: beforePowerOn.length,
+      /** whether every frame drawn before the screen powered on was black: nothing shows but by its light */
+      darkUntilPowerOn: beforePowerOn.every(({ brightest }) => brightest < 8),
+      /** whether, as the screen first lit, with the whole Macintosh in view, its light showed what is below it */
+      litBelowScreen: (frames.find(({ time }) => poweredOnAt !== undefined && time >= poweredOnAt)?.brightestBelow ?? 0) > 60,
+      /** whether every frame drawn was in shades of gray, with no color */
+      gray: frames.every(({ gray }) => gray),
       /** when the scene was first drawn with its screen lit, by the page's clock */
       litAt: frames.find(({ brightest }) => brightest > 60)?.time,
       /** whether a frame showed a lit screen in a dark room: bright and black parts together */
