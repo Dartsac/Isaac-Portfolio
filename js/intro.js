@@ -1,7 +1,7 @@
 // @ts-check
-// Intro: boots an original compact Macintosh, zooms into its screen, and types Isaac's name and Headline
-// in the Mac Window. Every way through it, played out or skipped, ends in the same ready state: the page
-// exactly as it is without this script.
+// Intro: boots an original compact Macintosh, zooms into its screen until it is the visitor's whole
+// screen, the Mac Desktop, and types Isaac's name and Headline in the Mac Window. Every way through it,
+// played out or skipped, ends in the same ready state: the page exactly as it is without this script.
 //
 // This script runs before the page is first drawn, so the Intro covers the portfolio from the first frame.
 // It marks the page with data-intro, the kind of Intro playing, and the stylesheet shows the Intro only then.
@@ -131,15 +131,21 @@ function untransformedBoxes(transformed, elements) {
 }
 
 /**
- * The transform that zooms the Intro's Macintosh until its screen covers the portfolio's own screen: on
- * large screens the Macintosh's screen, and on phones, where the Macintosh steps aside, the whole phone.
+ * The transform that zooms the Intro's Macintosh until its screen, inside its border, covers the whole
+ * browser window, which is then the Mac Desktop.
  * @param {HTMLElement} macintosh
- * @param {Element} screen the Intro's Macintosh's screen
+ * @param {HTMLElement} screen the Intro's Macintosh's screen
  */
 function zoomedIntoScreen(macintosh, screen) {
-  const pageScreen = /** @type {Element} */ (document.querySelector('.macintosh__screen')).getBoundingClientRect()
-  const target = pageScreen.width > 0 ? pageScreen : new DOMRect(0, 0, window.innerWidth, window.innerHeight)
-  const [frame, from] = untransformedBoxes(macintosh, [macintosh, screen])
+  // A pixel past each edge, so the browser's rounding of the transformed screen can't leave a hairline.
+  const target = new DOMRect(-1, -1, window.innerWidth + 2, window.innerHeight + 2)
+  const [frame, outline] = untransformedBoxes(macintosh, [macintosh, screen])
+  const from = new DOMRect(
+    outline.x + screen.clientLeft,
+    outline.y + screen.clientTop,
+    screen.clientWidth,
+    screen.clientHeight,
+  )
   const scale = Math.max(target.width / from.width, target.height / from.height)
   // Scaling about the Macintosh's center, then moving its screen's center onto the target's.
   const center = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 }
@@ -190,14 +196,20 @@ function prepareTyping(line, testId) {
   }
 }
 
-/** The Intro's artwork, drawn over the portfolio while the Intro plays. */
+/**
+ * The Intro's artwork, drawn over the portfolio while the Intro plays. The screen that powers on is the
+ * Macintosh's in the full Intro, and the visitor's whole screen in the Short Boot.
+ */
 function introArtwork() {
+  const screen = /** @type {HTMLElement} */ (
+    document.querySelector(root.dataset.intro === 'short' ? '.intro__boot-screen' : '.intro__screen')
+  )
   return {
     stage: /** @type {HTMLElement} */ (document.querySelector('.intro__stage')),
     macintosh: /** @type {HTMLElement} */ (document.querySelector('.intro__macintosh')),
-    screen: /** @type {HTMLElement} */ (document.querySelector('.intro__screen')),
-    glass: /** @type {HTMLElement} */ (document.querySelector('.intro__glass')),
-    happyComputer: /** @type {Element} */ (document.querySelector('.intro__happy-computer')),
+    screen,
+    glass: /** @type {HTMLElement} */ (screen.querySelector('.intro__glass')),
+    happyComputer: /** @type {Element} */ (screen.querySelector('.intro__happy-computer')),
   }
 }
 
@@ -218,18 +230,16 @@ async function powerOn({ glass, happyComputer }, greetingMs) {
 }
 
 /**
- * The artwork fades away, showing the portfolio on the Macintosh's screen.
+ * The artwork fades away, showing the portfolio on the Mac Desktop.
  * @param {ReturnType<typeof introArtwork>} artwork
  */
 function fadeIntoPortfolio({ stage }) {
   return play(stage, [{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'ease-in' })
 }
 
-/** The Short Boot: the Macintosh, already up close, starts up and opens straight onto the portfolio. */
+/** The Short Boot: the visitor's dark screen starts up and opens straight onto the portfolio. */
 async function playShortBoot() {
   const artwork = introArtwork()
-  const { macintosh, screen } = artwork
-  await play(macintosh, [{ transform: zoomedIntoScreen(macintosh, screen) }], { duration: 0 })
   await pause(150)
   await powerOn(artwork, 700)
   await fadeIntoPortfolio(artwork)
@@ -253,7 +263,7 @@ async function playFullIntro() {
   await powerOn(artwork, 1300)
   await pause(250)
 
-  // Zoom into its screen, which becomes the portfolio's own, from the distance the stylesheet sets.
+  // Zoom into its screen until it is the visitor's whole screen, from the distance the stylesheet sets.
   const distant = getComputedStyle(macintosh).transform
   await play(macintosh, [{ transform: distant }, { transform: zoomedIntoScreen(macintosh, screen) }], {
     duration: 1400,

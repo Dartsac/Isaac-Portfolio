@@ -8,16 +8,15 @@
   --rule: 2px;
   --font-display: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
   --font-body: Verdana, 'DejaVu Sans', 'Bitstream Vera Sans', sans-serif;
-  /* Menu titles shrink with the Macintosh screen they sit in, so all of them fit across it: a short
-  /* desktop window draws a small Macintosh, and on a phone the screen is the phone's own. (The cqw unit
-  /* is a hundredth of that screen's width, or of the phone's, where the Macintosh steps aside.) */
-  --menu-bar-font-size: clamp(0.6rem, 3.4cqw, 0.85rem);
+  /* Menu titles shrink with the browser window, which the Menu Bar spans, so all of them fit across
+  /* even a small phone. */
+  --menu-bar-font-size: clamp(0.6rem, 3.4vw, 0.85rem);
   --menu-title-padding-block: 0.35rem;
   /* One line of menu titles and their padding, plus the Menu Bar's bottom rule. */
   --menu-bar-height: calc(var(--menu-bar-font-size) + 2 * var(--menu-title-padding-block) + var(--rule));
   --title-bar-height: 1.5rem;
-  /* The compact Macintosh's height on large screens: the Easter Egg sizes itself to fit its screen. */
-  --mac-height: min(96vh, 60rem);
+  /* The pattern showing around the Mac Window on large screens. */
+  --mac-desktop-margin: clamp(1rem, 4vmin, 2.5rem);
   /* 50% checkerboard dither used for the desktop and decorative fills. */
   --dither: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='2' height='2' fill='%23fff'/%3E%3Cpath d='M0 0h1v1H0zM1 1h1v1H1z'/%3E%3C/svg%3E")
     0 0 / 2px 2px;
@@ -35,10 +34,6 @@ html {
 
 body {
   margin: 0;
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 2vh 1rem;
   background: var(--dither);
   color: var(--ink);
   font-family: var(--font-body);
@@ -46,67 +41,17 @@ body {
 }
 
 /******************************************
-/* COMPACT MACINTOSH
-/* An original, code-drawn compact computer that frames the Mac Window. The
-/* Intro draws the same computer, so it boots and zooms into this very frame.
+/* MAC DESKTOP
+/* The Macintosh's screen as the visitor's whole screen, once the Intro has
+/* entered it: the Menu Bar along the top, and the Mac Window on the 1-bit
+/* pattern. On large screens it fills the browser window exactly, so only the
+/* Mac Window scrolls.
 /*******************************************/
-.macintosh,
-.intro__macintosh {
-  width: calc(var(--mac-height) * 0.78);
-  height: var(--mac-height);
+.mac-desktop {
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
-  background: var(--paper);
-  border: var(--rule) solid var(--ink);
-  border-radius: 1.25rem 1.25rem 0.5rem 0.5rem;
-  box-shadow: 0.5rem 0.5rem 0 var(--ink);
-}
-
-.macintosh__bezel,
-.intro__bezel {
-  flex: 0 0 78%;
-  min-height: 0;
-  display: flex;
-  margin: 6% 7% 0;
-  padding: 5%;
-  border: var(--rule) solid var(--ink);
-  border-radius: 0.75rem;
-}
-
-.macintosh__screen,
-.intro__screen {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--dither);
-  border: var(--rule) solid var(--ink);
-  border-radius: 1rem / 1.25rem;
-  overflow: hidden;
-}
-
-.macintosh__screen {
-  /* The Menu Bar sizes its menu titles from this screen's width. */
-  container-type: inline-size;
-  /* The CRT effects are drawn over the whole screen. */
-  position: relative;
-}
-
-.macintosh__chin,
-.intro__chin {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 14%;
-}
-
-.macintosh__floppy-slot,
-.intro__floppy-slot {
-  width: 30%;
-  height: 0.6rem;
-  border: var(--rule) solid var(--ink);
-  border-radius: 0.3rem;
 }
 
 /******************************************
@@ -132,7 +77,7 @@ body {
   display: flex;
   gap: 0.125rem;
   margin: 0;
-  padding: 0 min(0.5rem, 2cqw);
+  padding: 0 min(0.5rem, 2vw);
   list-style: none;
   /* A screen too narrow for even the smallest menu titles scrolls them sideways rather than wrap them. */
   overflow-x: auto;
@@ -141,7 +86,7 @@ body {
 
 .menu-bar__title {
   display: block;
-  padding: var(--menu-title-padding-block) min(0.6rem, 2cqw);
+  padding: var(--menu-title-padding-block) min(0.6rem, 2vw);
   white-space: nowrap;
   text-decoration: none;
 }
@@ -177,7 +122,7 @@ body {
 /* shows selected (inverted) while pressed. */
 .menu-bar__easter-egg-opener {
   display: block;
-  padding: var(--menu-title-padding-block) min(0.5rem, 1.5cqw);
+  padding: var(--menu-title-padding-block) min(0.5rem, 1.5vw);
   background: none;
   color: var(--ink);
   border: 0;
@@ -203,7 +148,7 @@ body {
 
 .menu-bar__sound-toggle {
   display: block;
-  padding: var(--menu-title-padding-block) min(0.5rem, 1.5cqw);
+  padding: var(--menu-title-padding-block) min(0.5rem, 1.5vw);
   background: none;
   color: var(--ink);
   border: 0;
@@ -234,7 +179,8 @@ body {
 .mac-window {
   flex: 1;
   min-height: 0;
-  margin: 3%;
+  width: min(68rem, 100% - 2 * var(--mac-desktop-margin));
+  margin: var(--mac-desktop-margin) auto;
   display: flex;
   flex-direction: column;
   background: var(--paper);
@@ -795,22 +741,22 @@ a:focus-visible {
 /* EASTER EGG
 /* A classic About This Mac window, opened from the Menu Bar's first menu.
 /* No backdrop dims the portfolio: like a classic dialog, the window simply
-/* sits on top of it, here within the Macintosh screen, whose center is a
-/* little above the Macintosh's own. Its contents scale with the Macintosh, so
-/* a short desktop window draws a small About This Mac, as it draws a small
-/* Macintosh.
+/* sits on top of it, in the middle of the Mac Desktop below the Menu Bar. A
+/* short browser window draws its contents a little smaller, so every spec
+/* still shows at once.
 /*******************************************/
 .easter-egg {
-  /* The Macintosh screen is about 0.57 of the Macintosh's height across: the window and its shadow fit inside. */
-  width: min(26rem, calc(var(--mac-height) * 0.54));
-  max-height: calc(var(--mac-height) * 0.58);
-  translate: 0 calc(var(--mac-height) * -0.0625);
+  /* A modal dialog is centered in the browser window: starting it below the Menu Bar centers it under it. */
+  top: var(--menu-bar-height);
+  width: min(26rem, 100vw - 2rem);
+  max-height: calc(100vh - var(--menu-bar-height) - 2rem);
+  max-height: calc(100dvh - var(--menu-bar-height) - 2rem);
   padding: 0;
   background: var(--paper);
   color: var(--ink);
   border: var(--rule) solid var(--ink);
   box-shadow: 0.25rem 0.25rem 0 var(--ink);
-  font-size: clamp(0.75rem, calc(var(--mac-height) * 0.021), 1rem);
+  font-size: clamp(0.75rem, 2.8vh, 1rem);
 }
 
 /* Hidden until opened, even by a browser that doesn't know dialogs, which never offers to open it. */
@@ -945,8 +891,6 @@ html[data-intro] .intro {
   display: flex;
   justify-content: center;
   align-items: center;
-  /* As the page lays out the Macintosh, so the Intro's computer lands exactly on it. */
-  padding: 2vh 1rem;
   background: var(--dither);
   overflow: hidden;
   /* A swipe on the Intro doesn't scroll the portfolio hidden under it. */
@@ -959,10 +903,58 @@ html[data-intro='full'] .intro__macintosh {
   transform: scale(0.45);
 }
 
+/* An original, code-drawn compact computer, which the full Intro boots and zooms into until its screen
+/* is the visitor's whole screen. */
+.intro__macintosh {
+  /* Its height before it zooms into the screen. */
+  --mac-height: min(96vh, 60rem);
+  flex: none;
+  width: calc(var(--mac-height) * 0.78);
+  height: var(--mac-height);
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border: var(--rule) solid var(--ink);
+  border-radius: 1.25rem 1.25rem 0.5rem 0.5rem;
+  box-shadow: 0.5rem 0.5rem 0 var(--ink);
+}
+
+.intro__bezel {
+  flex: 0 0 78%;
+  min-height: 0;
+  display: flex;
+  margin: 6% 7% 0;
+  padding: 5%;
+  border: var(--rule) solid var(--ink);
+  border-radius: 0.75rem;
+}
+
 .intro__screen {
   position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
   justify-content: center;
   align-items: center;
+  background: var(--dither);
+  border: var(--rule) solid var(--ink);
+  border-radius: 1rem / 1.25rem;
+  overflow: hidden;
+}
+
+.intro__chin {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 14%;
+}
+
+.intro__floppy-slot {
+  width: 30%;
+  height: 0.6rem;
+  border: var(--rule) solid var(--ink);
+  border-radius: 0.3rem;
 }
 
 /* The screen's dark glass, before it powers on. */
@@ -972,14 +964,32 @@ html[data-intro='full'] .intro__macintosh {
   background: var(--ink);
 }
 
-.intro__macintosh {
-  flex: none;
-}
-
 .intro__happy-computer {
   width: 30%;
   height: auto;
   opacity: 0;
+}
+
+/* The Short Boot draws no Macintosh: the visitor's whole screen is the one that powers on. */
+.intro__boot-screen {
+  display: none;
+  position: absolute;
+  inset: 0;
+  justify-content: center;
+  align-items: center;
+  background: var(--dither);
+}
+
+html[data-intro='short'] .intro__macintosh {
+  display: none;
+}
+
+html[data-intro='short'] .intro__boot-screen {
+  display: flex;
+}
+
+.intro__boot-screen .intro__happy-computer {
+  width: clamp(4rem, 15vmin, 8rem);
 }
 
 /* Once the Intro has zoomed into the screen, the portfolio shows through. */
@@ -1064,14 +1074,14 @@ html[data-intro-phase='typing'] .mac-window__content > :not(.ready-title) {
 
 /******************************************
 /* CRT EFFECTS
-/* The Macintosh screen's glass, drawn over it: faint scanlines, edges that
-/* dim like a curved tube's, a fine grain that drifts, and a slight flicker.
-/* All of it is faint enough for body text to keep its contrast, and lets every
-/* press and scroll through to the screen below. Visitors who prefer reduced
+/* The screen's glass, drawn over the whole Mac Desktop: faint scanlines,
+/* edges that dim like a curved tube's, a fine grain that drifts, and a slight
+/* flicker. All of it is faint enough for body text to keep its contrast, and
+/* lets every press and scroll through to the screen below. Visitors who prefer reduced
 /* motion see the grain held still and no flicker.
 /*******************************************/
 .crt {
-  position: absolute;
+  position: fixed;
   z-index: 3;
   inset: 0;
   overflow: hidden;
@@ -1173,16 +1183,12 @@ html[data-intro-phase='typing'] .mac-window__content > :not(.ready-title) {
 
 /******************************************
 /* SMALL SCREENS
-/* The Mac Window fills the viewport; the computer frame steps aside. The page
-/* itself scrolls, for natural touch scrolling, under the Menu Bar and the Mac
-/* Window's title bar, which stay stuck to the top of the screen.
+/* The Mac Window fills the width of the screen, with no pattern around it. The
+/* page itself scrolls, for natural touch scrolling, under the Menu Bar and the
+/* Mac Window's title bar, which stay stuck to the top of the screen.
 /*******************************************/
 @media (max-width: 40rem), (max-height: 32rem) {
   body {
-    display: block;
-    /* Block layout honors alignment too: stretch the Menu Bar and Mac Window across the screen. */
-    place-items: normal;
-    padding: 0;
     background: var(--paper);
   }
 
@@ -1191,22 +1197,13 @@ html[data-intro-phase='typing'] .mac-window__content > :not(.ready-title) {
     top: 0;
   }
 
-  .macintosh,
-  .macintosh__bezel,
-  .macintosh__screen {
-    display: contents;
-  }
-
-  .macintosh__chin {
-    display: none;
-  }
-
-  /* With the Macintosh stepped aside, the CRT effects cover the phone's own screen. */
-  .crt {
-    position: fixed;
+  .mac-desktop {
+    display: block;
+    height: auto;
   }
 
   .mac-window {
+    width: auto;
     min-height: calc(100vh - var(--menu-bar-height));
     min-height: calc(100dvh - var(--menu-bar-height));
     margin: 0;
@@ -1222,15 +1219,6 @@ html[data-intro-phase='typing'] .mac-window__content > :not(.ready-title) {
 
   .mac-window__content {
     overflow: visible;
-  }
-
-  /* With no Macintosh drawn, the Easter Egg sits in the middle of the screen. */
-  .easter-egg {
-    font-size: 1rem;
-    width: min(26rem, calc(100vw - 2rem));
-    max-height: calc(100vh - 2rem);
-    max-height: calc(100dvh - 2rem);
-    translate: none;
   }
 
   /* Moving to a Section stops with its heading just below the stuck Menu Bar and title bar. */

@@ -37,7 +37,9 @@ async function expectReady(page, { timeout } = {}) {
  * @typedef {object} IntroRecording what a visitor saw of the Intro, sampled every animation frame
  * @property {{ line: 'name' | 'headline', text: string }[]} typed each change in the typed name or Headline, in order
  * @property {number[]} macintoshHeights the on-screen height of the Intro's Macintosh while it showed
- * @property {boolean} smiled whether the Intro's Macintosh has shown its smiling computer
+ * @property {boolean} enteredScreen whether the Intro's Macintosh's screen has covered the whole browser window
+ * @property {boolean[]} bootScreenCovered for each frame the Intro showed, whether the Short Boot's screen covered the whole browser window
+ * @property {boolean} smiled whether the Intro has shown its smiling computer
  */
 
 /**
@@ -47,10 +49,24 @@ async function expectReady(page, { timeout } = {}) {
 async function recordIntro(page) {
   await page.addInitScript(() => {
     /** @type {IntroRecording} */
-    const recording = { typed: [], macintoshHeights: [], smiled: false }
+    const recording = { typed: [], macintoshHeights: [], enteredScreen: false, bootScreenCovered: [], smiled: false }
     Object.assign(window, { introRecording: recording })
     /** @type {Record<string, string | null>} */
     const last = {}
+    /**
+     * Whether what's inside an element's border covers the whole browser window, however it's scaled.
+     * @param {Element | null | undefined} element
+     */
+    const coversWindow = (element) => {
+      if (!(element instanceof HTMLElement)) return false
+      const box = element.getBoundingClientRect()
+      const scale = box.width / element.offsetWidth
+      const [left, top] = [box.left + element.clientLeft * scale, box.top + element.clientTop * scale]
+      const [right, bottom] = [left + element.clientWidth * scale, top + element.clientHeight * scale]
+      return left <= 0 && top <= 0 && right >= innerWidth && bottom >= innerHeight
+    }
+    /** @param {Element | null | undefined} element */
+    const shows = (element) => Boolean(element?.checkVisibility({ opacityProperty: true }))
     const sample = () => {
       for (const line of /** @type {const} */ (['name', 'headline'])) {
         const text = document.querySelector(`[data-testid="typed-${line}"]`)?.textContent ?? null
@@ -58,11 +74,14 @@ async function recordIntro(page) {
         last[line] = text
       }
       const macintosh = document.querySelector('[data-testid="intro-macintosh"]')
-      if (macintosh?.checkVisibility({ opacityProperty: true })) {
+      if (macintosh && shows(macintosh)) {
         recording.macintoshHeights.push(macintosh.getBoundingClientRect().height)
-        const happyComputer = document.querySelector('[data-testid="intro-happy-computer"]')
-        if (happyComputer?.checkVisibility({ opacityProperty: true })) recording.smiled = true
+        if (coversWindow(macintosh.querySelector('[data-testid="intro-screen"]'))) recording.enteredScreen = true
       }
+      if (shows(document.querySelector('.intro__stage'))) {
+        recording.bootScreenCovered.push(coversWindow(document.querySelector('[data-testid="intro-boot-screen"]')))
+      }
+      if ([...document.querySelectorAll('[data-testid="intro-happy-computer"]')].some(shows)) recording.smiled = true
       requestAnimationFrame(sample)
     }
     requestAnimationFrame(sample)
@@ -79,7 +98,7 @@ async function introRecording(page) {
 }
 
 /**
- * Waits until the Intro's Macintosh greets the visitor with its smiling computer.
+ * Waits until the Intro or Short Boot greets the visitor with its smiling computer.
  * @param {import('@playwright/test').Page} page
  */
 async function expectSmilingComputer(page) {
@@ -114,21 +133,23 @@ function expectTypedOut(typed, line, text) {
 }
 
 /**
- * Opens the portfolio and expects the Short Boot: the Macintosh, already up close, starts up with its
- * smiling computer and goes straight to the ready state, with nothing typed.
+ * Opens the portfolio and expects the Short Boot: a screen covering the whole browser window from the
+ * first frame starts up with its smiling computer and goes straight to the ready state, with no Macintosh
+ * shown and nothing typed.
  * @param {import('@playwright/test').Page} page
  */
 async function expectShortBoot(page) {
   await recordIntro(page)
   await visitPortfolio(page)
-  const screenHeight = page.viewportSize()?.height ?? 0
 
   await expect(skipControl(page)).toBeVisible()
   await expectSmilingComputer(page)
   await expectReady(page)
 
-  const { typed, macintoshHeights } = await introRecording(page)
-  expect(Math.min(...macintoshHeights), 'the Macintosh is up close from the start').toBeGreaterThan(screenHeight * 0.9)
+  const { typed, macintoshHeights, bootScreenCovered } = await introRecording(page)
+  expect(bootScreenCovered.length, 'frames of the Short Boot').toBeGreaterThan(0)
+  expect(bootScreenCovered, 'the screen covers the browser window in every frame').not.toContain(false)
+  expect(macintoshHeights, 'frames showing a Macintosh').toEqual([])
   expect(typed, 'nothing typed').toEqual([])
 }
 
@@ -252,17 +273,18 @@ for (const layout of LAYOUTS) {
   test.describe(`Intro for a first-time visitor on ${layout.name}`, () => {
     useLayout(layout)
 
-    test('boots the Macintosh, zooms into its screen, and types Isaac’s name and then the Headline', async ({ page }) => {
+    test('boots the Macintosh, zooms until its screen is the whole screen, and types Isaac’s name and then the Headline', async ({
+      page,
+    }) => {
       await recordIntro(page)
       await visitPortfolio(page)
-      const screenHeight = page.viewportSize()?.height ?? 0
 
       // The Macintosh boots in the distance, greeting the visitor with a smiling computer.
       await expectFullIntroStarted(page)
       await expectReady(page, { timeout: 15_000 })
 
-      const { typed, macintoshHeights } = await introRecording(page)
-      expect(Math.max(...macintoshHeights), 'the Macintosh is zoomed into').toBeGreaterThan(screenHeight * 0.9)
+      const { typed, enteredScreen } = await introRecording(page)
+      expect(enteredScreen, 'the Macintosh’s screen covers the whole browser window').toBe(true)
       expectTypedOut(typed, 'name', NAME)
       expectTypedOut(typed, 'headline', HEADLINE)
       const nameDone = typed.findIndex(({ line, text }) => line === 'name' && text === NAME)
@@ -335,7 +357,7 @@ test.describe('Short Boot for a returning visitor', () => {
     await expectReady(page)
 
     await visitPortfolio(page)
-    await expect(page.getByTestId('intro-happy-computer')).toBeAttached()
+    await expect(skipControl(page)).toBeVisible()
     await skipControl(page).click()
 
     await expectReady(page)

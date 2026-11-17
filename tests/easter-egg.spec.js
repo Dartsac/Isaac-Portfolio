@@ -1,36 +1,61 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { LAYOUTS, useLayout, openPortfolio, menuBar, easterEggMenu, easterEgg, tabToNext, boxOf } = require('./support/portfolio')
+const { LAYOUTS, PHONES, useLayout, openPortfolio, menuBar, easterEggMenu, easterEgg, tabToNext, boxOf } = require('./support/portfolio')
+
+/**
+ * Expects the Easter Egg to open whole on the Mac Desktop, below the Menu Bar, with every spec showing at
+ * once, down to the last, without scrolling it.
+ * @param {import('@playwright/test').Page} page
+ */
+async function expectEasterEggOpensWhole(page) {
+  await openPortfolio(page)
+  await easterEggMenu(page).click()
+
+  const screen = page.viewportSize()
+  if (!screen) throw new Error('No viewport')
+  // The window's drop shadow, a quarter of a rem, has to fit too.
+  const shadow = 4
+  const aboutThisMac = await boxOf(easterEgg(page))
+  const menu = await boxOf(menuBar(page))
+  expect(aboutThisMac.x, 'left edge').toBeGreaterThanOrEqual(0)
+  expect(aboutThisMac.x + aboutThisMac.width + shadow, 'right edge').toBeLessThanOrEqual(screen.width)
+  expect(aboutThisMac.y, 'top edge').toBeGreaterThanOrEqual(menu.y + menu.height)
+  expect(aboutThisMac.y + aboutThisMac.height + shadow, 'bottom edge').toBeLessThanOrEqual(screen.height)
+  const lastSpec = await boxOf(easterEgg(page).getByRole('definition').last())
+  expect(lastSpec.y + lastSpec.height, 'last spec').toBeLessThanOrEqual(aboutThisMac.y + aboutThisMac.height)
+}
 
 test.describe('Easter Egg on desktop', () => {
-  // From the shortest window that still draws the Macintosh up to a common laptop screen.
+  // From the shortest window that is still a desktop layout up to a common laptop screen.
   for (const size of [
     { width: 641, height: 513 },
     { width: 800, height: 600 },
     { width: 1280, height: 560 },
     { width: 1280, height: 800 },
   ]) {
-    test(`opens within the Macintosh screen of a ${size.width} × ${size.height} window`, async ({ page }) => {
+    test(`opens whole on the Mac Desktop of a ${size.width} × ${size.height} window`, async ({ page }) => {
       await page.setViewportSize(size)
-      await openPortfolio(page)
-      await easterEggMenu(page).click()
 
-      // The Menu Bar spans the Macintosh screen, and the Mac Window ends near its bottom. The window's
-      // drop shadow, a quarter of a rem, has to fit too.
-      const shadow = 4
-      const aboutThisMac = await boxOf(easterEgg(page))
-      const menu = await boxOf(menuBar(page))
-      const macWindow = await boxOf(page.getByRole('main'))
-      expect(aboutThisMac.x, 'left edge').toBeGreaterThanOrEqual(menu.x)
-      expect(aboutThisMac.x + aboutThisMac.width + shadow, 'right edge').toBeLessThanOrEqual(menu.x + menu.width)
-      expect(aboutThisMac.y, 'top edge').toBeGreaterThanOrEqual(menu.y + menu.height)
-      expect(aboutThisMac.y + aboutThisMac.height + shadow, 'bottom edge').toBeLessThanOrEqual(macWindow.y + macWindow.height)
-      // Every spec shows at once, down to the last, without scrolling the window.
-      const lastSpec = await boxOf(easterEgg(page).getByRole('definition').last())
-      expect(lastSpec.y + lastSpec.height, 'last spec').toBeLessThanOrEqual(aboutThisMac.y + aboutThisMac.height)
+      await expectEasterEggOpensWhole(page)
     })
   }
 })
+
+for (const phone of PHONES) {
+  test.describe(`Easter Egg on ${phone.name}`, () => {
+    useLayout(phone)
+
+    test('opens whole on the screen', async ({ page }) => {
+      await expectEasterEggOpensWhole(page)
+    })
+
+    test('opens whole on even a small phone', async ({ page }) => {
+      await page.setViewportSize({ width: 320, height: 568 })
+
+      await expectEasterEggOpensWhole(page)
+    })
+  })
+}
 
 test.describe('Easter Egg in a browser that cannot open it', () => {
   test('leaves the Menu Bar without it, and shows none of its window', async ({ page }) => {

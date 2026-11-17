@@ -57,13 +57,16 @@ async function blockAutoplay(page) {
 }
 
 /**
- * Waits until the Intro or Short Boot has started up the Macintosh, when its chime would sound.
+ * Waits until the Intro or Short Boot has started up its screen, when its chime would sound.
  * @param {import('@playwright/test').Page} page
  */
 async function waitForStartUp(page) {
   // Checked every animation frame: the Short Boot shows its smiling computer only briefly.
   await page.waitForFunction(
-    () => document.querySelector('[data-testid="intro-happy-computer"]')?.checkVisibility({ opacityProperty: true }),
+    () =>
+      [...document.querySelectorAll('[data-testid="intro-happy-computer"]')].some((happyComputer) =>
+        happyComputer.checkVisibility({ opacityProperty: true }),
+      ),
     undefined,
     { polling: 'raf', timeout: 10_000 },
   )

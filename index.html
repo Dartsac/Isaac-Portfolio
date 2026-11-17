@@ -43,7 +43,7 @@
       <div class="intro__stage" aria-hidden="true">
         <div class="intro__macintosh" data-testid="intro-macintosh">
           <div class="intro__bezel">
-            <div class="intro__screen">
+            <div class="intro__screen" data-testid="intro-screen">
               <span class="intro__glass"></span>
               <!-- An original smiling computer, drawn for this portfolio: a little computer and keyboard. -->
               <svg
@@ -71,6 +71,30 @@
             <span class="intro__floppy-slot"></span>
           </div>
         </div>
+        <!-- The Short Boot's screen: the visitor's whole screen powering on, with no Macintosh around it. -->
+        <div class="intro__boot-screen" data-testid="intro-boot-screen">
+          <span class="intro__glass"></span>
+          <!-- The same smiling computer as the Macintosh's screen shows. -->
+          <svg
+            class="intro__happy-computer"
+            data-testid="intro-happy-computer"
+            viewBox="0 0 32 32"
+            shape-rendering="crispEdges"
+            fill="#000"
+            stroke="#000"
+            stroke-width="1"
+          >
+            <rect x="7.5" y="1.5" width="17" height="21" rx="1.5" fill="#fff" />
+            <rect x="10.5" y="4.5" width="11" height="9" rx="1" fill="#fff" />
+            <rect x="13" y="7" width="2" height="2" stroke="none" />
+            <rect x="17" y="7" width="2" height="2" stroke="none" />
+            <path d="M12.5 10.5h1v1h5v-1h1" fill="none" />
+            <rect x="16" y="17" width="6" height="1" stroke="none" />
+            <rect x="10.5" y="22.5" width="11" height="2" fill="#fff" />
+            <rect x="4.5" y="26.5" width="23" height="4" rx="0.5" fill="#fff" />
+            <path d="M7 28.5h18" stroke-dasharray="1 1" />
+          </svg>
+        </div>
       </div>
       <div class="intro__controls" data-testid="intro-controls">
         <button class="intro__skip button" type="button">Skip Intro</button>
@@ -93,485 +117,479 @@
       </div>
     </div>
 
-    <div class="macintosh">
-      <div class="macintosh__bezel">
-        <div class="macintosh__screen">
-          <nav class="menu-bar" aria-label="Menu Bar">
-            <ul class="menu-bar__titles">
-              <!-- The first menu, as on a classic Macintosh, opens the Easter Egg. Shown once js/easter-egg.js can open it. -->
-              <li class="menu-bar__easter-egg" hidden>
-                <button class="menu-bar__easter-egg-opener" type="button" aria-haspopup="dialog" title="About This Mac">
-                  <svg
-                    class="menu-bar__happy-computer"
-                    viewBox="0 0 32 32"
-                    shape-rendering="crispEdges"
-                    fill="currentColor"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    aria-hidden="true"
-                  >
-                    <rect x="7" y="1" width="18" height="22" rx="2" fill="none" />
-                    <rect x="11" y="5" width="10" height="8" fill="none" />
-                    <rect x="13" y="7" width="2" height="2" stroke="none" />
-                    <rect x="17" y="7" width="2" height="2" stroke="none" />
-                    <path d="M13 10h1v1h4v-1h1" fill="none" stroke-width="1" />
-                    <rect x="16" y="17" width="6" height="2" stroke="none" />
-                    <rect x="4" y="26" width="24" height="5" rx="1" fill="none" />
-                  </svg>
-                  <span class="visually-hidden">About This Mac</span>
-                </button>
-              </li>
-              <li><a class="menu-bar__title" href="#about">About</a></li>
-              <li><a class="menu-bar__title" href="#projects">Projects</a></li>
-              <li><a class="menu-bar__title" href="#technologies">Technologies</a></li>
-              <li><a class="menu-bar__title" href="#contact">Contact</a></li>
-              <!-- Turns the startup chime on or off. Shown once js/sound.js can play it. -->
-              <li class="menu-bar__sound" hidden>
-                <button class="menu-bar__sound-toggle sound-toggle" type="button" aria-pressed="false" title="Sound">
-                  <svg
-                    class="sound-toggle__icon"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.5"
-                    aria-hidden="true"
-                  >
-                    <path d="M1.5 5.5h3l4-3.5v12l-4-3.5h-3z" fill="currentColor" stroke-linejoin="round" />
-                    <path class="sound-toggle__waves" d="M11 5.5c1 1.4 1 3.6 0 5M13 3.5c2.2 2.6 2.2 6.4 0 9" />
-                    <path class="sound-toggle__muted" d="M10.5 5.5l5 5m0-5l-5 5" />
-                  </svg>
-                  <span class="visually-hidden">Sound</span>
-                </button>
-              </li>
-            </ul>
-          </nav>
-          <div class="mac-window">
-            <div class="mac-window__title-bar" aria-hidden="true" data-testid="mac-window-title-bar">
-              <span class="mac-window__close-box"></span>
-              <span class="mac-window__title">Isaac Dobson</span>
-            </div>
-            <main class="mac-window__content">
-              <header class="ready-title">
-                <h1 class="ready-title__name">Isaac Dobson</h1>
-                <p class="ready-title__headline">Software Engineer — Data &amp; Platform</p>
-              </header>
+    <!-- The Mac Desktop: the Macintosh's screen as the visitor's whole screen, once the Intro has entered it. -->
+    <div class="mac-desktop">
+      <nav class="menu-bar" aria-label="Menu Bar">
+        <ul class="menu-bar__titles">
+          <!-- The first menu, as on a classic Macintosh, opens the Easter Egg. Shown once js/easter-egg.js can open it. -->
+          <li class="menu-bar__easter-egg" hidden>
+            <button class="menu-bar__easter-egg-opener" type="button" aria-haspopup="dialog" title="About This Mac">
+              <svg
+                class="menu-bar__happy-computer"
+                viewBox="0 0 32 32"
+                shape-rendering="crispEdges"
+                fill="currentColor"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <rect x="7" y="1" width="18" height="22" rx="2" fill="none" />
+                <rect x="11" y="5" width="10" height="8" fill="none" />
+                <rect x="13" y="7" width="2" height="2" stroke="none" />
+                <rect x="17" y="7" width="2" height="2" stroke="none" />
+                <path d="M13 10h1v1h4v-1h1" fill="none" stroke-width="1" />
+                <rect x="16" y="17" width="6" height="2" stroke="none" />
+                <rect x="4" y="26" width="24" height="5" rx="1" fill="none" />
+              </svg>
+              <span class="visually-hidden">About This Mac</span>
+            </button>
+          </li>
+          <li><a class="menu-bar__title" href="#about">About</a></li>
+          <li><a class="menu-bar__title" href="#projects">Projects</a></li>
+          <li><a class="menu-bar__title" href="#technologies">Technologies</a></li>
+          <li><a class="menu-bar__title" href="#contact">Contact</a></li>
+          <!-- Turns the startup chime on or off. Shown once js/sound.js can play it. -->
+          <li class="menu-bar__sound" hidden>
+            <button class="menu-bar__sound-toggle sound-toggle" type="button" aria-pressed="false" title="Sound">
+              <svg
+                class="sound-toggle__icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                aria-hidden="true"
+              >
+                <path d="M1.5 5.5h3l4-3.5v12l-4-3.5h-3z" fill="currentColor" stroke-linejoin="round" />
+                <path class="sound-toggle__waves" d="M11 5.5c1 1.4 1 3.6 0 5M13 3.5c2.2 2.6 2.2 6.4 0 9" />
+                <path class="sound-toggle__muted" d="M10.5 5.5l5 5m0-5l-5 5" />
+              </svg>
+              <span class="visually-hidden">Sound</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+      <div class="mac-window">
+        <div class="mac-window__title-bar" aria-hidden="true" data-testid="mac-window-title-bar">
+          <span class="mac-window__close-box"></span>
+          <span class="mac-window__title">Isaac Dobson</span>
+        </div>
+        <main class="mac-window__content">
+          <header class="ready-title">
+            <h1 class="ready-title__name">Isaac Dobson</h1>
+            <p class="ready-title__headline">Software Engineer — Data &amp; Platform</p>
+          </header>
 
-              <section id="about" class="section" tabindex="-1" aria-labelledby="about-title">
-                <h2 id="about-title" class="section__title">About</h2>
-                <div class="about__summary">
-                  <div class="time-machine about__headshot">
+          <section id="about" class="section" tabindex="-1" aria-labelledby="about-title">
+            <h2 id="about-title" class="section__title">About</h2>
+            <div class="about__summary">
+              <div class="time-machine about__headshot">
+                <img
+                  class="time-machine__one-bit"
+                  src="img/headshot-1bit.png"
+                  srcset="img/headshot-1bit.png 1x, img/headshot-1bit@2x.png 2x"
+                  alt="Isaac Dobson"
+                  width="160"
+                  height="199"
+                />
+                <img
+                  class="time-machine__full-color"
+                  src="img/headshot-full-color.webp"
+                  alt=""
+                  width="160"
+                  height="199"
+                  loading="lazy"
+                />
+                <button class="time-machine__toggle" type="button" aria-pressed="false" hidden>
+                  Full color<span class="visually-hidden"> headshot</span>
+                </button>
+              </div>
+              <p>
+                Isaac is a Senior Software Engineer at AT&amp;T, where he has spent 4+ years
+                building and operating data and platform tooling: high-throughput ETL pipelines,
+                REST integrations, and the internal tools that keep them running.
+              </p>
+              <p>
+                He likes making systems faster and delivery simpler, and he backs that up with
+                clear documentation, code review, and mentoring across teams.
+              </p>
+            </div>
+
+            <div class="about__facts">
+              <div class="labelled-group" role="group" aria-labelledby="education-title">
+                <h3 id="education-title" class="labelled-group__title">Education</h3>
+                <p>
+                  <strong>Georgia Institute of Technology</strong><br />
+                  B.S. in Computer Science with Honors, December 2021<br />
+                  Concentrations: Artificial Intelligence and Human-Computer Interaction
+                </p>
+              </div>
+
+              <div class="labelled-group" role="group" aria-labelledby="spoken-languages-title">
+                <h3 id="spoken-languages-title" class="labelled-group__title">Spoken languages</h3>
+                <ul class="fact-list">
+                  <li class="fact-list__item">Spanish (native)</li>
+                  <li class="fact-list__item">English (fluent)</li>
+                </ul>
+              </div>
+
+              <div class="labelled-group labelled-group--wide" role="group" aria-labelledby="leadership-title">
+                <h3 id="leadership-title" class="labelled-group__title">Leadership</h3>
+                <ul class="fact-list">
+                  <li class="fact-list__item">
+                    <strong>NCAA Division I Student-Athlete</strong>, Georgia Tech Cheerleading
+                    Team, 2019–2021
+                  </li>
+                  <li class="fact-list__item">
+                    <strong>President</strong>, Pi Kappa Phi, Iota Master Chapter, 2020–2021
+                  </li>
+                  <li class="fact-list__item">
+                    <strong>Soil Engineer Leader</strong>, Dunda School Reconstruction,
+                    Uttarakhand, India, 2014–2016
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section id="projects" class="section" tabindex="-1" aria-labelledby="projects-title">
+            <h2 id="projects-title" class="section__title">Projects</h2>
+            <p>Selected work, from data-platform automation to personal projects.</p>
+
+            <article class="project" aria-labelledby="project-att-title">
+              <header class="project__header">
+                <p class="project__kind">Case Study</p>
+                <h3 id="project-att-title" class="project__title">AT&amp;T drift detection and auto-remediation</h3>
+                <p class="project__year">2022–present</p>
+              </header>
+              <ul class="tag-list project__technologies" aria-label="Technologies">
+                <li class="tag-list__item">React</li>
+                <li class="tag-list__item">REST/JSON</li>
+                <li class="tag-list__item">ServiceNow Table/REST APIs</li>
+              </ul>
+              <p>
+                A system that keeps AT&amp;T’s Common Information Model documentation and the
+                ServiceNow Inventory Model schema in sync, with a person approving every change.
+              </p>
+
+              <div class="labelled-group" role="group" aria-labelledby="att-problem-title">
+                <h4 id="att-problem-title" class="labelled-group__title">Problem</h4>
+                <p>
+                  The documented model and the system schema are maintained separately, so they
+                  drift apart: a field added or changed on one side goes unnoticed on the other.
+                  Catching every difference by hand is slow.
+                </p>
+              </div>
+
+              <div class="labelled-group" role="group" aria-labelledby="att-architecture-title">
+                <h4 id="att-architecture-title" class="labelled-group__title">Architecture</h4>
+                <ol class="flow-list">
+                  <li class="flow-list__item">
+                    <strong>Parse</strong> the model documentation into canonical JSON.
+                  </li>
+                  <li class="flow-list__item">
+                    <strong>Compare</strong> it with the system schema using a structural diff.
+                  </li>
+                  <li class="flow-list__item">
+                    <strong>Review</strong> each difference in a React interface built for human approval.
+                  </li>
+                  <li class="flow-list__item">
+                    <strong>Update</strong> the documentation or the system through their APIs once a
+                    change is approved.
+                  </li>
+                  <li class="flow-list__item">
+                    <strong>Record</strong> every difference, decision, and update in a full audit history.
+                  </li>
+                </ol>
+              </div>
+
+              <div class="labelled-group" role="group" aria-labelledby="att-outcomes-title">
+                <h4 id="att-outcomes-title" class="labelled-group__title">Outcomes</h4>
+                <p>Measured results from Isaac’s data-platform work at AT&amp;T:</p>
+                <ul class="outcome-list">
+                  <li class="outcome-list__item">
+                    <strong class="outcome-list__figure">92%</strong>
+                    <span>faster ETL: record processing cut from 37 hours to 3 hours through in-memory caching.</span>
+                  </li>
+                  <li class="outcome-list__item">
+                    <strong class="outcome-list__figure">&lt;1 week</strong>
+                    <span>to production for new data sources: a self-service pattern cut the wait from 3–6 weeks to under one week.</span>
+                  </li>
+                </ul>
+              </div>
+
+              <p class="project__note">
+                Shared at a public level only: no internal code, screenshots, or data.
+              </p>
+            </article>
+
+            <article class="project" aria-labelledby="project-halee-title">
+              <header class="project__header">
+                <h3 id="project-halee-title" class="project__title">Halee McCray portfolio</h3>
+                <p class="project__year">2025</p>
+              </header>
+              <ul class="tag-list project__technologies" aria-label="Technologies">
+                <li class="tag-list__item">React</li>
+                <li class="tag-list__item">SCSS</li>
+                <li class="tag-list__item">GSAP</li>
+                <li class="tag-list__item">EmailJS</li>
+                <li class="tag-list__item">GitHub Pages</li>
+              </ul>
+              <p>
+                A responsive portfolio for Halee McCray, designed and built in React with SCSS
+                styling and GSAP animations. EmailJS handles client contact, and SEO and performance
+                tuning keep the site quick to load and easy to find.
+              </p>
+              <p class="project__links">
+                <a class="project__link" href="https://haleemccray.com">Visit haleemccray.com</a>
+              </p>
+            </article>
+
+            <article class="project" aria-labelledby="project-crystal-title">
+              <header class="project__header">
+                <h3 id="project-crystal-title" class="project__title">Crystal Spirituality</h3>
+                <p class="project__year">2020–2021</p>
+              </header>
+              <ul class="tag-list project__technologies" aria-label="Technologies">
+                <li class="tag-list__item">PHP</li>
+                <li class="tag-list__item">MySQL</li>
+                <li class="tag-list__item">JavaScript</li>
+                <li class="tag-list__item">HTML/CSS</li>
+                <li class="tag-list__item">React Native</li>
+              </ul>
+              <p>
+                A spiritual guide and crystal shop built around each user’s birth chart. Isaac
+                founded the project and built the full-stack web app from scratch: HTML, CSS,
+                JavaScript, and PHP over a MySQL database that manages user data and authentication.
+                He extended it to iOS and Android with React Native and demoed the prototype at
+                Georgia Tech’s Idea to Prototype expo.
+              </p>
+              <figure class="project__visual">
+                <div class="time-machine">
+                  <img
+                    class="time-machine__one-bit"
+                    src="img/projects/crystal-home.png"
+                    srcset="img/projects/crystal-home.png 1x, img/projects/crystal-home@2x.png 2x"
+                    alt="Crystal prototype home page: the Crystal wordmark and the tagline “Bringing you closer to yourself through spirituality” over a starry night sky, with Get your guide and Learn more buttons."
+                    width="400"
+                    height="230"
+                    loading="lazy"
+                  />
+                  <img
+                    class="time-machine__full-color"
+                    src="img/projects/crystal-home-full-color.webp"
+                    alt=""
+                    width="400"
+                    height="230"
+                    loading="lazy"
+                  />
+                  <button class="time-machine__toggle" type="button" aria-pressed="false" hidden>
+                    Full color<span class="visually-hidden"> Crystal home page</span>
+                  </button>
+                </div>
+                <figcaption class="project__caption">
+                  The running prototype’s home page, shown in 1-bit: point at it to peek, or tap it or
+                  press Full color to see the whole screen in color. Background photo by ESO/A. Fitzsimmons,
+                  <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
+                </figcaption>
+              </figure>
+              <p class="project__links">
+                <a class="project__link" href="https://github.com/Dartsac/CrystalPrototype">Crystal prototype on GitHub</a>
+              </p>
+            </article>
+
+            <article class="project" aria-labelledby="project-cnn-art-title">
+              <header class="project__header">
+                <h3 id="project-cnn-art-title" class="project__title">TensorFlow CNN Art Generation</h3>
+                <p class="project__year">2021</p>
+              </header>
+              <ul class="tag-list project__technologies" aria-label="Technologies">
+                <li class="tag-list__item">Python</li>
+                <li class="tag-list__item">TensorFlow</li>
+                <li class="tag-list__item">CNN</li>
+              </ul>
+              <p>
+                A TensorFlow convolutional neural network that reconstructs one image in the
+                artistic style of another, following Gatys, Ecker, and Bethge’s neural algorithm of
+                artistic style. Varying the training from run to run produces one-of-a-kind art
+                pieces.
+              </p>
+              <figure class="project__visual" data-time-machine-group>
+                <div class="art-inputs">
+                  <div class="time-machine">
                     <img
                       class="time-machine__one-bit"
-                      src="img/headshot-1bit.png"
-                      srcset="img/headshot-1bit.png 1x, img/headshot-1bit@2x.png 2x"
-                      alt="Isaac Dobson"
-                      width="160"
-                      height="199"
+                      src="img/projects/cnn-art-content.png"
+                      srcset="img/projects/cnn-art-content.png 1x, img/projects/cnn-art-content@2x.png 2x"
+                      alt="Content input: a photograph of forested hills dotted with red-roofed houses beneath distant mountain ridges."
+                      width="196"
+                      height="104"
+                      loading="lazy"
                     />
                     <img
                       class="time-machine__full-color"
-                      src="img/headshot-full-color.webp"
+                      src="img/projects/cnn-art-content-full-color.webp"
                       alt=""
-                      width="160"
-                      height="199"
+                      width="196"
+                      height="104"
                       loading="lazy"
                     />
-                    <button class="time-machine__toggle" type="button" aria-pressed="false" hidden>
-                      Full color<span class="visually-hidden"> headshot</span>
-                    </button>
                   </div>
-                  <p>
-                    Isaac is a Senior Software Engineer at AT&amp;T, where he has spent 4+ years
-                    building and operating data and platform tooling: high-throughput ETL pipelines,
-                    REST integrations, and the internal tools that keep them running.
-                  </p>
-                  <p>
-                    He likes making systems faster and delivery simpler, and he backs that up with
-                    clear documentation, code review, and mentoring across teams.
-                  </p>
-                </div>
-
-                <div class="about__facts">
-                  <div class="labelled-group" role="group" aria-labelledby="education-title">
-                    <h3 id="education-title" class="labelled-group__title">Education</h3>
-                    <p>
-                      <strong>Georgia Institute of Technology</strong><br />
-                      B.S. in Computer Science with Honors, December 2021<br />
-                      Concentrations: Artificial Intelligence and Human-Computer Interaction
-                    </p>
-                  </div>
-
-                  <div class="labelled-group" role="group" aria-labelledby="spoken-languages-title">
-                    <h3 id="spoken-languages-title" class="labelled-group__title">Spoken languages</h3>
-                    <ul class="fact-list">
-                      <li class="fact-list__item">Spanish (native)</li>
-                      <li class="fact-list__item">English (fluent)</li>
-                    </ul>
-                  </div>
-
-                  <div class="labelled-group labelled-group--wide" role="group" aria-labelledby="leadership-title">
-                    <h3 id="leadership-title" class="labelled-group__title">Leadership</h3>
-                    <ul class="fact-list">
-                      <li class="fact-list__item">
-                        <strong>NCAA Division I Student-Athlete</strong>, Georgia Tech Cheerleading
-                        Team, 2019–2021
-                      </li>
-                      <li class="fact-list__item">
-                        <strong>President</strong>, Pi Kappa Phi, Iota Master Chapter, 2020–2021
-                      </li>
-                      <li class="fact-list__item">
-                        <strong>Soil Engineer Leader</strong>, Dunda School Reconstruction,
-                        Uttarakhand, India, 2014–2016
-                      </li>
-                    </ul>
+                  <div class="time-machine">
+                    <img
+                      class="time-machine__one-bit"
+                      src="img/projects/cnn-art-style.png"
+                      srcset="img/projects/cnn-art-style.png 1x, img/projects/cnn-art-style@2x.png 2x"
+                      alt="Style input: Hokusai’s woodblock print The Great Wave off Kanagawa, a towering wave breaking into claws of foam."
+                      width="155"
+                      height="104"
+                      loading="lazy"
+                    />
+                    <img
+                      class="time-machine__full-color"
+                      src="img/projects/cnn-art-style-full-color.webp"
+                      alt=""
+                      width="155"
+                      height="104"
+                      loading="lazy"
+                    />
                   </div>
                 </div>
-              </section>
-
-              <section id="projects" class="section" tabindex="-1" aria-labelledby="projects-title">
-                <h2 id="projects-title" class="section__title">Projects</h2>
-                <p>Selected work, from data-platform automation to personal projects.</p>
-
-                <article class="project" aria-labelledby="project-att-title">
-                  <header class="project__header">
-                    <p class="project__kind">Case Study</p>
-                    <h3 id="project-att-title" class="project__title">AT&amp;T drift detection and auto-remediation</h3>
-                    <p class="project__year">2022–present</p>
-                  </header>
-                  <ul class="tag-list project__technologies" aria-label="Technologies">
-                    <li class="tag-list__item">React</li>
-                    <li class="tag-list__item">REST/JSON</li>
-                    <li class="tag-list__item">ServiceNow Table/REST APIs</li>
-                  </ul>
-                  <p>
-                    A system that keeps AT&amp;T’s Common Information Model documentation and the
-                    ServiceNow Inventory Model schema in sync, with a person approving every change.
-                  </p>
-
-                  <div class="labelled-group" role="group" aria-labelledby="att-problem-title">
-                    <h4 id="att-problem-title" class="labelled-group__title">Problem</h4>
-                    <p>
-                      The documented model and the system schema are maintained separately, so they
-                      drift apart: a field added or changed on one side goes unnoticed on the other.
-                      Catching every difference by hand is slow.
-                    </p>
-                  </div>
-
-                  <div class="labelled-group" role="group" aria-labelledby="att-architecture-title">
-                    <h4 id="att-architecture-title" class="labelled-group__title">Architecture</h4>
-                    <ol class="flow-list">
-                      <li class="flow-list__item">
-                        <strong>Parse</strong> the model documentation into canonical JSON.
-                      </li>
-                      <li class="flow-list__item">
-                        <strong>Compare</strong> it with the system schema using a structural diff.
-                      </li>
-                      <li class="flow-list__item">
-                        <strong>Review</strong> each difference in a React interface built for human approval.
-                      </li>
-                      <li class="flow-list__item">
-                        <strong>Update</strong> the documentation or the system through their APIs once a
-                        change is approved.
-                      </li>
-                      <li class="flow-list__item">
-                        <strong>Record</strong> every difference, decision, and update in a full audit history.
-                      </li>
-                    </ol>
-                  </div>
-
-                  <div class="labelled-group" role="group" aria-labelledby="att-outcomes-title">
-                    <h4 id="att-outcomes-title" class="labelled-group__title">Outcomes</h4>
-                    <p>Measured results from Isaac’s data-platform work at AT&amp;T:</p>
-                    <ul class="outcome-list">
-                      <li class="outcome-list__item">
-                        <strong class="outcome-list__figure">92%</strong>
-                        <span>faster ETL: record processing cut from 37 hours to 3 hours through in-memory caching.</span>
-                      </li>
-                      <li class="outcome-list__item">
-                        <strong class="outcome-list__figure">&lt;1 week</strong>
-                        <span>to production for new data sources: a self-service pattern cut the wait from 3–6 weeks to under one week.</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  <p class="project__note">
-                    Shared at a public level only: no internal code, screenshots, or data.
-                  </p>
-                </article>
-
-                <article class="project" aria-labelledby="project-halee-title">
-                  <header class="project__header">
-                    <h3 id="project-halee-title" class="project__title">Halee McCray portfolio</h3>
-                    <p class="project__year">2025</p>
-                  </header>
-                  <ul class="tag-list project__technologies" aria-label="Technologies">
-                    <li class="tag-list__item">React</li>
-                    <li class="tag-list__item">SCSS</li>
-                    <li class="tag-list__item">GSAP</li>
-                    <li class="tag-list__item">EmailJS</li>
-                    <li class="tag-list__item">GitHub Pages</li>
-                  </ul>
-                  <p>
-                    A responsive portfolio for Halee McCray, designed and built in React with SCSS
-                    styling and GSAP animations. EmailJS handles client contact, and SEO and performance
-                    tuning keep the site quick to load and easy to find.
-                  </p>
-                  <p class="project__links">
-                    <a class="project__link" href="https://haleemccray.com">Visit haleemccray.com</a>
-                  </p>
-                </article>
-
-                <article class="project" aria-labelledby="project-crystal-title">
-                  <header class="project__header">
-                    <h3 id="project-crystal-title" class="project__title">Crystal Spirituality</h3>
-                    <p class="project__year">2020–2021</p>
-                  </header>
-                  <ul class="tag-list project__technologies" aria-label="Technologies">
-                    <li class="tag-list__item">PHP</li>
-                    <li class="tag-list__item">MySQL</li>
-                    <li class="tag-list__item">JavaScript</li>
-                    <li class="tag-list__item">HTML/CSS</li>
-                    <li class="tag-list__item">React Native</li>
-                  </ul>
-                  <p>
-                    A spiritual guide and crystal shop built around each user’s birth chart. Isaac
-                    founded the project and built the full-stack web app from scratch: HTML, CSS,
-                    JavaScript, and PHP over a MySQL database that manages user data and authentication.
-                    He extended it to iOS and Android with React Native and demoed the prototype at
-                    Georgia Tech’s Idea to Prototype expo.
-                  </p>
-                  <figure class="project__visual">
-                    <div class="time-machine">
-                      <img
-                        class="time-machine__one-bit"
-                        src="img/projects/crystal-home.png"
-                        srcset="img/projects/crystal-home.png 1x, img/projects/crystal-home@2x.png 2x"
-                        alt="Crystal prototype home page: the Crystal wordmark and the tagline “Bringing you closer to yourself through spirituality” over a starry night sky, with Get your guide and Learn more buttons."
-                        width="400"
-                        height="230"
-                        loading="lazy"
-                      />
-                      <img
-                        class="time-machine__full-color"
-                        src="img/projects/crystal-home-full-color.webp"
-                        alt=""
-                        width="400"
-                        height="230"
-                        loading="lazy"
-                      />
-                      <button class="time-machine__toggle" type="button" aria-pressed="false" hidden>
-                        Full color<span class="visually-hidden"> Crystal home page</span>
-                      </button>
-                    </div>
-                    <figcaption class="project__caption">
-                      The running prototype’s home page, shown in 1-bit: point at it to peek, or tap it or
-                      press Full color to see the whole screen in color. Background photo by ESO/A. Fitzsimmons,
-                      <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>.
-                    </figcaption>
-                  </figure>
-                  <p class="project__links">
-                    <a class="project__link" href="https://github.com/Dartsac/CrystalPrototype">Crystal prototype on GitHub</a>
-                  </p>
-                </article>
-
-                <article class="project" aria-labelledby="project-cnn-art-title">
-                  <header class="project__header">
-                    <h3 id="project-cnn-art-title" class="project__title">TensorFlow CNN Art Generation</h3>
-                    <p class="project__year">2021</p>
-                  </header>
-                  <ul class="tag-list project__technologies" aria-label="Technologies">
-                    <li class="tag-list__item">Python</li>
-                    <li class="tag-list__item">TensorFlow</li>
-                    <li class="tag-list__item">CNN</li>
-                  </ul>
-                  <p>
-                    A TensorFlow convolutional neural network that reconstructs one image in the
-                    artistic style of another, following Gatys, Ecker, and Bethge’s neural algorithm of
-                    artistic style. Varying the training from run to run produces one-of-a-kind art
-                    pieces.
-                  </p>
-                  <figure class="project__visual" data-time-machine-group>
-                    <div class="art-inputs">
-                      <div class="time-machine">
-                        <img
-                          class="time-machine__one-bit"
-                          src="img/projects/cnn-art-content.png"
-                          srcset="img/projects/cnn-art-content.png 1x, img/projects/cnn-art-content@2x.png 2x"
-                          alt="Content input: a photograph of forested hills dotted with red-roofed houses beneath distant mountain ridges."
-                          width="196"
-                          height="104"
-                          loading="lazy"
-                        />
-                        <img
-                          class="time-machine__full-color"
-                          src="img/projects/cnn-art-content-full-color.webp"
-                          alt=""
-                          width="196"
-                          height="104"
-                          loading="lazy"
-                        />
-                      </div>
-                      <div class="time-machine">
-                        <img
-                          class="time-machine__one-bit"
-                          src="img/projects/cnn-art-style.png"
-                          srcset="img/projects/cnn-art-style.png 1x, img/projects/cnn-art-style@2x.png 2x"
-                          alt="Style input: Hokusai’s woodblock print The Great Wave off Kanagawa, a towering wave breaking into claws of foam."
-                          width="155"
-                          height="104"
-                          loading="lazy"
-                        />
-                        <img
-                          class="time-machine__full-color"
-                          src="img/projects/cnn-art-style-full-color.webp"
-                          alt=""
-                          width="155"
-                          height="104"
-                          loading="lazy"
-                        />
-                      </div>
-                    </div>
-                    <div class="time-machine">
-                      <img
-                        class="time-machine__one-bit"
-                        src="img/projects/cnn-art-output.png"
-                        srcset="img/projects/cnn-art-output.png 1x, img/projects/cnn-art-output@2x.png 2x"
-                        alt="Generated output: the hillside photograph redrawn in the Great Wave’s curling, foam-like strokes."
-                        width="400"
-                        height="213"
-                        loading="lazy"
-                      />
-                      <img
-                        class="time-machine__full-color"
-                        src="img/projects/cnn-art-output-full-color.webp"
-                        alt=""
-                        width="400"
-                        height="213"
-                        loading="lazy"
-                      />
-                      <button class="time-machine__toggle" type="button" aria-pressed="false" hidden>
-                        Full color<span class="visually-hidden"> CNN Art images</span>
-                      </button>
-                    </div>
-                    <figcaption class="project__caption">
-                      Top: the content photograph and the style painting. Bottom: the network’s
-                      reconstruction of the photograph in that style. Shown in 1-bit: point at an image to
-                      peek, or tap any of them or press Full color to see all three in color.
-                    </figcaption>
-                  </figure>
-                </article>
-
-                <article class="project" aria-labelledby="project-tmux-title">
-                  <header class="project__header">
-                    <h3 id="project-tmux-title" class="project__title">tmux-pane-clarity</h3>
-                    <p class="project__year">2024</p>
-                  </header>
-                  <ul class="tag-list project__technologies" aria-label="Technologies">
-                    <li class="tag-list__item">tmux</li>
-                    <li class="tag-list__item">Shell</li>
-                    <li class="tag-list__item">Python</li>
-                    <li class="tag-list__item">Rust</li>
-                  </ul>
-                  <p>
-                    Neighboring tmux panes share their borders, so it is hard to see at a glance which
-                    pane is active. This tmux plugin draws thin, complete frames around panes without
-                    changing your theme’s backgrounds or text colors: a framed zoom by default, or
-                    every pane framed by a small Rust layout engine. It restores any bindings and
-                    options it replaces when it is unloaded.
-                  </p>
-                  <p class="project__links">
-                    <a class="project__link" href="https://github.com/Dartsac/tmux-pane-clarity">tmux-pane-clarity on GitHub</a>
-                  </p>
-                </article>
-              </section>
-
-              <section id="technologies" class="section" tabindex="-1" aria-labelledby="technologies-title">
-                <h2 id="technologies-title" class="section__title">Technologies</h2>
-                <p>The languages, data platforms, and tools from Isaac’s resume.</p>
-                <div class="technologies__groups">
-                  <div class="labelled-group" role="group" aria-labelledby="tech-languages-title">
-                    <h3 id="tech-languages-title" class="labelled-group__title">Languages</h3>
-                    <ul class="tag-list">
-                      <li class="tag-list__item">Python</li>
-                      <li class="tag-list__item">SQL</li>
-                      <li class="tag-list__item">JavaScript</li>
-                      <li class="tag-list__item">Java</li>
-                      <li class="tag-list__item">C++</li>
-                      <li class="tag-list__item">HTML/CSS</li>
-                      <li class="tag-list__item">PHP</li>
-                    </ul>
-                  </div>
-
-                  <div class="labelled-group" role="group" aria-labelledby="tech-data-title">
-                    <h3 id="tech-data-title" class="labelled-group__title">Data/ETL and databases</h3>
-                    <ul class="tag-list">
-                      <li class="tag-list__item">ServiceNow ETL</li>
-                      <li class="tag-list__item">Service Graph Connectors</li>
-                      <li class="tag-list__item">REST/JSON</li>
-                      <li class="tag-list__item">Oracle</li>
-                      <li class="tag-list__item">MySQL</li>
-                      <li class="tag-list__item">Schema design</li>
-                    </ul>
-                  </div>
-
-                  <div class="labelled-group" role="group" aria-labelledby="tech-tools-title">
-                    <h3 id="tech-tools-title" class="labelled-group__title">Frameworks and tools</h3>
-                    <ul class="tag-list">
-                      <li class="tag-list__item">React</li>
-                      <li class="tag-list__item">ServiceNow Table/REST APIs</li>
-                      <li class="tag-list__item">Git/GitHub administration</li>
-                      <li class="tag-list__item">PlantUML</li>
-                    </ul>
-                  </div>
+                <div class="time-machine">
+                  <img
+                    class="time-machine__one-bit"
+                    src="img/projects/cnn-art-output.png"
+                    srcset="img/projects/cnn-art-output.png 1x, img/projects/cnn-art-output@2x.png 2x"
+                    alt="Generated output: the hillside photograph redrawn in the Great Wave’s curling, foam-like strokes."
+                    width="400"
+                    height="213"
+                    loading="lazy"
+                  />
+                  <img
+                    class="time-machine__full-color"
+                    src="img/projects/cnn-art-output-full-color.webp"
+                    alt=""
+                    width="400"
+                    height="213"
+                    loading="lazy"
+                  />
+                  <button class="time-machine__toggle" type="button" aria-pressed="false" hidden>
+                    Full color<span class="visually-hidden"> CNN Art images</span>
+                  </button>
                 </div>
-              </section>
+                <figcaption class="project__caption">
+                  Top: the content photograph and the style painting. Bottom: the network’s
+                  reconstruction of the photograph in that style. Shown in 1-bit: point at an image to
+                  peek, or tap any of them or press Full color to see all three in color.
+                </figcaption>
+              </figure>
+            </article>
 
-              <section id="contact" class="section" tabindex="-1" aria-labelledby="contact-title">
-                <h2 id="contact-title" class="section__title">Contact</h2>
-                <p>
-                  Email Isaac, find him on these profiles, or download his Public Resume.
-                </p>
-                <ul class="contact-list">
-                  <li>
-                    <a class="contact-link" href="mailto:isaacdobson@me.com">
-                      <span class="contact-link__label">Email</span>
-                      <span>isaacdobson@me.com</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a class="contact-link" href="https://www.linkedin.com/in/isaac-dobson-6aa924217/" rel="me">
-                      <span class="contact-link__label">LinkedIn</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a class="contact-link" href="https://github.com/Dartsac" rel="me">
-                      <span class="contact-link__label">GitHub</span>
-                    </a>
-                  </li>
-                  <li>
-                    <a class="contact-link" href="https://x.com/IsaacDobson" rel="me">
-                      <span class="contact-link__label">Twitter/X</span>
-                    </a>
-                  </li>
+            <article class="project" aria-labelledby="project-tmux-title">
+              <header class="project__header">
+                <h3 id="project-tmux-title" class="project__title">tmux-pane-clarity</h3>
+                <p class="project__year">2024</p>
+              </header>
+              <ul class="tag-list project__technologies" aria-label="Technologies">
+                <li class="tag-list__item">tmux</li>
+                <li class="tag-list__item">Shell</li>
+                <li class="tag-list__item">Python</li>
+                <li class="tag-list__item">Rust</li>
+              </ul>
+              <p>
+                Neighboring tmux panes share their borders, so it is hard to see at a glance which
+                pane is active. This tmux plugin draws thin, complete frames around panes without
+                changing your theme’s backgrounds or text colors: a framed zoom by default, or
+                every pane framed by a small Rust layout engine. It restores any bindings and
+                options it replaces when it is unloaded.
+              </p>
+              <p class="project__links">
+                <a class="project__link" href="https://github.com/Dartsac/tmux-pane-clarity">tmux-pane-clarity on GitHub</a>
+              </p>
+            </article>
+          </section>
+
+          <section id="technologies" class="section" tabindex="-1" aria-labelledby="technologies-title">
+            <h2 id="technologies-title" class="section__title">Technologies</h2>
+            <p>The languages, data platforms, and tools from Isaac’s resume.</p>
+            <div class="technologies__groups">
+              <div class="labelled-group" role="group" aria-labelledby="tech-languages-title">
+                <h3 id="tech-languages-title" class="labelled-group__title">Languages</h3>
+                <ul class="tag-list">
+                  <li class="tag-list__item">Python</li>
+                  <li class="tag-list__item">SQL</li>
+                  <li class="tag-list__item">JavaScript</li>
+                  <li class="tag-list__item">Java</li>
+                  <li class="tag-list__item">C++</li>
+                  <li class="tag-list__item">HTML/CSS</li>
+                  <li class="tag-list__item">PHP</li>
                 </ul>
-                <p>
-                  <a
-                    class="button"
-                    href="resume/Isaac-Dobson-Resume.pdf"
-                    download="Isaac-Dobson-Resume.pdf"
-                    >Download Public Resume (PDF)</a
-                  >
-                </p>
-              </section>
-            </main>
-          </div>
-          <!-- The CRT effects over the screen: grain, scanlines, curvature, and flicker, drawn in css/style.css. -->
-          <div class="crt" aria-hidden="true"></div>
-        </div>
+              </div>
+
+              <div class="labelled-group" role="group" aria-labelledby="tech-data-title">
+                <h3 id="tech-data-title" class="labelled-group__title">Data/ETL and databases</h3>
+                <ul class="tag-list">
+                  <li class="tag-list__item">ServiceNow ETL</li>
+                  <li class="tag-list__item">Service Graph Connectors</li>
+                  <li class="tag-list__item">REST/JSON</li>
+                  <li class="tag-list__item">Oracle</li>
+                  <li class="tag-list__item">MySQL</li>
+                  <li class="tag-list__item">Schema design</li>
+                </ul>
+              </div>
+
+              <div class="labelled-group" role="group" aria-labelledby="tech-tools-title">
+                <h3 id="tech-tools-title" class="labelled-group__title">Frameworks and tools</h3>
+                <ul class="tag-list">
+                  <li class="tag-list__item">React</li>
+                  <li class="tag-list__item">ServiceNow Table/REST APIs</li>
+                  <li class="tag-list__item">Git/GitHub administration</li>
+                  <li class="tag-list__item">PlantUML</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section id="contact" class="section" tabindex="-1" aria-labelledby="contact-title">
+            <h2 id="contact-title" class="section__title">Contact</h2>
+            <p>
+              Email Isaac, find him on these profiles, or download his Public Resume.
+            </p>
+            <ul class="contact-list">
+              <li>
+                <a class="contact-link" href="mailto:isaacdobson@me.com">
+                  <span class="contact-link__label">Email</span>
+                  <span>isaacdobson@me.com</span>
+                </a>
+              </li>
+              <li>
+                <a class="contact-link" href="https://www.linkedin.com/in/isaac-dobson-6aa924217/" rel="me">
+                  <span class="contact-link__label">LinkedIn</span>
+                </a>
+              </li>
+              <li>
+                <a class="contact-link" href="https://github.com/Dartsac" rel="me">
+                  <span class="contact-link__label">GitHub</span>
+                </a>
+              </li>
+              <li>
+                <a class="contact-link" href="https://x.com/IsaacDobson" rel="me">
+                  <span class="contact-link__label">Twitter/X</span>
+                </a>
+              </li>
+            </ul>
+            <p>
+              <a
+                class="button"
+                href="resume/Isaac-Dobson-Resume.pdf"
+                download="Isaac-Dobson-Resume.pdf"
+                >Download Public Resume (PDF)</a
+              >
+            </p>
+          </section>
+        </main>
       </div>
-      <div class="macintosh__chin" aria-hidden="true">
-        <span class="macintosh__floppy-slot"></span>
-      </div>
+      <!-- The CRT effects over the whole Mac Desktop: grain, scanlines, curvature, and flicker, drawn in css/style.css. -->
+      <div class="crt" aria-hidden="true"></div>
     </div>
 
     <!-- The Easter Egg: a classic About This Mac window describing Isaac with playful computer-style specs. -->

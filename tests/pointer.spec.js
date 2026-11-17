@@ -1,6 +1,15 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { PHONES, useLayout, openPortfolio, section, menuTitle, easterEggMenu, easterEgg } = require('./support/portfolio')
+const {
+  PHONES,
+  useLayout,
+  openPortfolio,
+  section,
+  menuTitle,
+  easterEggMenu,
+  easterEgg,
+  macDesktopPatternAreas,
+} = require('./support/portfolio')
 
 /** The classic arrow drawn for this portfolio, as a cursor image. */
 const CLASSIC_POINTER = /url\(.*cursor-arrow\.svg.*\)/
@@ -14,7 +23,20 @@ function cursorOver(locator) {
 }
 
 /**
- * The desktop around the Macintosh, the Menu Bar, and the Mac Window around its text.
+ * The cursor the browser shows at a point on screen, over whatever is there.
+ * @param {import('@playwright/test').Page} page
+ * @param {{ x: number, y: number }} point
+ */
+function cursorAt(page, point) {
+  return page.evaluate(({ x, y }) => {
+    const element = document.elementFromPoint(x, y)
+    if (!element) throw new Error(`Nothing at ${x}, ${y}`)
+    return getComputedStyle(element).cursor
+  }, point)
+}
+
+/**
+ * The page, the Menu Bar, and the Mac Window around its text.
  * @param {import('@playwright/test').Page} page
  */
 function plainSurfaces(page) {
@@ -37,6 +59,15 @@ test.describe('Pointer on desktop', () => {
     await openPortfolio(page)
 
     for (const surface of plainSurfaces(page)) expect(await cursorOver(surface)).toMatch(CLASSIC_POINTER)
+  })
+
+  test('is the classic arrow over the Mac Desktop’s pattern on every side of the Mac Window', async ({ page }) => {
+    await openPortfolio(page)
+
+    for (const { side, area } of await macDesktopPatternAreas(page)) {
+      const middle = { x: area.x + area.width / 2, y: area.y + area.height / 2 }
+      expect(await cursorAt(page, middle), `${side} the Mac Window`).toMatch(CLASSIC_POINTER)
+    }
   })
 
   test('is the I-beam over reading text, which can still be selected', async ({ page }) => {

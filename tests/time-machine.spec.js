@@ -199,7 +199,7 @@ test('loads every full-color image, web-optimized', async ({ page }) => {
 })
 
 test.describe('Time Machine 1-bit images on a full-HD desktop screen', () => {
-  // The Macintosh reaches its largest size here, so every 1-bit image has room for its natural width.
+  // The Mac Window is at its widest here, so every 1-bit image has room for its natural width.
   test.use({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 })
 
   test('draws every 1-bit image at its natural width, so no pixel of the dither is dropped', async ({ page }) => {

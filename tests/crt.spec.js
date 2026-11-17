@@ -9,6 +9,7 @@ const {
   menuBarSoundControl,
   easterEggMenu,
   boxOf,
+  macDesktopPatternAreas,
   largestColorDifference,
 } = require('./support/portfolio')
 
@@ -49,6 +50,15 @@ async function luminances(page, clip) {
 function percentile(values, fraction) {
   const sorted = [...values].sort((a, b) => a - b)
   return sorted[Math.min(sorted.length - 1, Math.floor(fraction * sorted.length))]
+}
+
+/**
+ * How far apart the largest and smallest values are. (Spreading a large screenshot's pixels into
+ * Math.max would overflow the call stack.)
+ * @param {number[]} values
+ */
+function spread(values) {
+  return values.reduce((max, v) => Math.max(max, v), -Infinity) - values.reduce((min, v) => Math.min(min, v), Infinity)
 }
 
 /**
@@ -96,7 +106,7 @@ for (const layout of LAYOUTS) {
       await openPortfolio(page)
 
       const pixels = await luminances(page, await blankScreenArea(page))
-      expect(Math.max(...pixels) - Math.min(...pixels), 'variation across a blank screen').toBeGreaterThan(0.02)
+      expect(spread(pixels), 'variation across a blank screen').toBeGreaterThan(0.02)
     })
 
     test('make the grain and flicker move', async ({ page }) => {
@@ -124,6 +134,25 @@ for (const layout of LAYOUTS) {
   })
 }
 
+test.describe('CRT effects on the Mac Desktop', () => {
+  test('cover the pattern around the Mac Window, out to the edges of the browser window', async ({ page }) => {
+    await openPortfolio(page)
+    const screen = page.viewportSize()
+    if (!screen) throw new Error('No viewport')
+
+    const edge = 8
+    for (const { side, area } of await macDesktopPatternAreas(page)) {
+      // The stretch of pattern farthest from the Mac Window, along the browser window's own edge.
+      const farthest = {
+        left: { ...area, width: edge },
+        right: { ...area, x: screen.width - edge, width: edge },
+        below: { ...area, y: screen.height - edge, height: edge },
+      }[side]
+      await expect.poll(() => changeOverAMoment(page, farthest), `how far the pattern ${side} it changes`).toBeGreaterThan(2)
+    }
+  })
+})
+
 test.describe('CRT effects for a visitor who prefers reduced motion', () => {
   test.use({ reducedMotion: 'reduce' })
 
@@ -136,7 +165,7 @@ test.describe('CRT effects for a visitor who prefers reduced motion', () => {
         const area = await blankScreenArea(page)
 
         const pixels = await luminances(page, area)
-        expect(Math.max(...pixels) - Math.min(...pixels), 'variation across a blank screen').toBeGreaterThan(0.02)
+        expect(spread(pixels), 'variation across a blank screen').toBeGreaterThan(0.02)
         for (let look = 0; look < 3; look++) {
           expect(await changeOverAMoment(page, area), 'how far the screen changes').toBeLessThanOrEqual(2)
         }

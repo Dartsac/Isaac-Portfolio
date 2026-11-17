@@ -291,7 +291,7 @@ for (const layout of LAYOUTS) {
 }
 
 test.describe('Mac Window on desktop', () => {
-  test('scrolls inside the Macintosh screen exactly as far as the visitor asks', async ({ page }) => {
+  test('scrolls within itself on the Mac Desktop exactly as far as the visitor asks', async ({ page }) => {
     await openPortfolio(page)
     const macWindow = page.getByRole('main')
     const menuBarBefore = await boxOf(menuBar(page))
@@ -304,7 +304,7 @@ test.describe('Mac Window on desktop', () => {
       await expect.poll(() => macWindow.evaluate((main) => main.scrollTop)).toBe(120 * turns)
     }
 
-    // The Macintosh and its Menu Bar stay put around the scrolling Mac Window.
+    // The page and its Menu Bar stay put around the scrolling Mac Window.
     expect(await page.evaluate(() => window.scrollY)).toBe(0)
     expect(await boxOf(menuBar(page))).toEqual(menuBarBefore)
   })
@@ -324,7 +324,7 @@ test.describe('Mac Window on desktop', () => {
     await expectCurrent(page, 'About')
   })
 
-  // The Macintosh shrinks with the window's height, down to the shortest window that still shows it.
+  // Short desktop windows, down to the narrowest and shortest that are still a desktop layout.
   for (const size of [
     { width: 1366, height: 650 },
     { width: 1280, height: 560 },

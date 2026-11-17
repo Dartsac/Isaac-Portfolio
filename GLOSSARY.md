@@ -5,15 +5,19 @@ A personal portfolio presented as if visitors are using a classic black-and-whit
 ## Experience
 
 **Intro**:
-The opening sequence that boots a compact Macintosh, zooms into its screen, and types Isaac's name and headline.
+The opening sequence in which a 3D compact Macintosh boots in a dark room lit only by its screen, the view circles in and through the screen, and Isaac's name and Headline are typed.
 _Avoid_: Splash screen, loader, Lottie
 
 **Short Boot**:
-The abbreviated Intro shown to returning visitors.
+The abbreviated Intro, without the 3D Macintosh: a brief screen power-on shown to returning visitors and to visitors whose browsers can't show the full Intro.
 _Avoid_: Mini intro
 
+**Mac Desktop**:
+The Macintosh's screen as the visitor's whole screen once the Intro ends: the Menu Bar along the top and a 1-bit pattern behind the Mac Window.
+_Avoid_: Background, wallpaper, desktop (alone, which suggests a kind of computer)
+
 **Mac Window**:
-The classic window on the Macintosh screen where portfolio content is read and scrolled.
+The classic window on the Mac Desktop where portfolio content is read and scrolled.
 _Avoid_: Modal, card, page
 
 **Menu Bar**:
@@ -33,11 +37,11 @@ The original sound that accompanies the Intro or Short Boot once a visitor turns
 _Avoid_: Boot sound, Mac chime
 
 **CRT Effects**:
-The faint grain, scanlines, dimmed edges suggesting a curved tube, and flicker drawn over the Macintosh screen. Visitors who prefer reduced motion see them held still.
+The faint grain, scanlines, dimmed edges suggesting a curved tube, and flicker drawn over the Mac Desktop. Visitors who prefer reduced motion see them held still.
 _Avoid_: Filter, overlay
 
 **Classic Pointer**:
-The original 1-bit arrow shown in place of the system pointer on desktops with a mouse or trackpad.
+The original 1-bit arrow shown in place of the system pointer on computers with a mouse or trackpad.
 _Avoid_: Custom cursor
 
 **Easter Egg**:

@@ -20,7 +20,7 @@ const PHONES = ['Pixel 7', 'iPhone 15'].map((name) => {
 })
 
 /**
- * The compact Macintosh on a desktop, in every project's own browser, and the full-screen Mac Window on each phone.
+ * The Mac Desktop on a computer, in every project's own browser, and the full-screen Mac Window on each phone.
  * @type {Layout[]}
  */
 const LAYOUTS = [{ name: 'desktop', browser: undefined, emulation: {} }, ...PHONES]
@@ -195,6 +195,36 @@ async function boxOf(locator) {
   const box = await locator.boundingBox()
   if (!box) throw new Error(`${locator} is not on screen`)
   return box
+}
+
+/**
+ * Where the Mac Window is on screen, from the top of its title bar to the bottom of its content.
+ * @param {import('@playwright/test').Page} page
+ */
+async function macWindowBox(page) {
+  const titleBar = await boxOf(page.getByTestId('mac-window-title-bar'))
+  const content = await boxOf(page.getByRole('main'))
+  return { x: titleBar.x, y: titleBar.y, width: titleBar.width, height: content.y + content.height - titleBar.y }
+}
+
+/**
+ * The Mac Desktop's pattern on each side of the Mac Window, out to the edges of the browser window: left,
+ * right, and below. A few pixels next to the Mac Window are left out, for its border and drop shadow.
+ * @param {import('@playwright/test').Page} page
+ * @returns {Promise<{ side: 'left' | 'right' | 'below', area: ScreenArea }[]>}
+ */
+async function macDesktopPatternAreas(page) {
+  const screen = page.viewportSize()
+  if (!screen) throw new Error('No viewport')
+  const macWindow = await macWindowBox(page)
+  const gap = 6
+  const right = macWindow.x + macWindow.width + gap
+  const bottom = macWindow.y + macWindow.height + gap
+  return /** @type {const} */ ([
+    { side: 'left', area: { x: 0, y: macWindow.y, width: macWindow.x - gap, height: macWindow.height } },
+    { side: 'right', area: { x: right, y: macWindow.y, width: screen.width - right, height: macWindow.height } },
+    { side: 'below', area: { x: macWindow.x, y: bottom, width: macWindow.width, height: screen.height - bottom } },
+  ])
 }
 
 /**
@@ -375,6 +405,7 @@ module.exports = {
   swipeUp,
   expectWhollyOnScreen,
   boxOf,
+  macDesktopPatternAreas,
   group,
   pdfText,
   lookAt,
