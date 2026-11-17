@@ -59,6 +59,136 @@ function introSoundControl(page) {
   return page.getByTestId('intro-controls').getByRole('button', { name: 'Sound', exact: true })
 }
 
+/** Matches the address of a file of three.js, the 3D library only the full Intro loads, by how it ends. */
+const THREE_JS = /\/three\.[\w.]*js$/
+
+/**
+ * Collects the address of each request for three.js the page makes from now on.
+ * @param {import('@playwright/test').Page} page
+ */
+function watchThreeJsRequests(page) {
+  /** @type {string[]} */
+  const requests = []
+  page.on('request', (request) => {
+    if (THREE_JS.test(request.url())) requests.push(request.url())
+  })
+  return requests
+}
+
+/**
+ * @typedef {object} IntroSceneFrame how one drawing of the Intro's 3D scene looked
+ * @property {number} time when it was drawn, by the page's clock (performance.now())
+ * @property {number} darkest the brightness, from 0 to 255, of its darkest part
+ * @property {number} brightest the brightness, from 0 to 255, of its brightest part
+ * @property {boolean} fillsWindow whether the scene's canvas covered the whole browser window
+ * @property {boolean} oneBit whether every pixel looked at was pure black or pure white, with some of each:
+ *   the screen's 1-bit picture alone, with no shaded Macintosh, dark room, or flare blending over it
+ */
+
+/**
+ * Watches the Intro's 3D scene from the moment the page starts loading: each WebGL context the page makes,
+ * and what the scene's canvas shows each time it is drawn. So that what was drawn can be read back, the
+ * page's WebGL contexts keep their drawing between frames. The page's window.lookAtIntroScene() tells how the
+ * scene looks at any moment, such as when a sound starts.
+ * @param {import('@playwright/test').Page} page
+ */
+async function watchIntroScene(page) {
+  await page.addInitScript(() => {
+    /** @type {{ contexts: (WebGLRenderingContext | WebGL2RenderingContext)[], frames: IntroSceneFrame[] }} */
+    const watched = { contexts: [], frames: [] }
+    Object.assign(window, { introSceneWatched: watched })
+
+    const getContext = HTMLCanvasElement.prototype.getContext
+    /** @this {HTMLCanvasElement} @param {string} type @param {any} [attributes] */
+    function keepingDrawing(type, attributes) {
+      const webgl = type === 'webgl' || type === 'webgl2'
+      const context = getContext.call(this, type, webgl ? { ...attributes, preserveDrawingBuffer: true } : attributes)
+      if (webgl && context && !watched.contexts.includes(/** @type {WebGL2RenderingContext} */ (context))) {
+        watched.contexts.push(/** @type {WebGL2RenderingContext} */ (context))
+      }
+      return context
+    }
+    HTMLCanvasElement.prototype.getContext = /** @type {any} */ (keepingDrawing)
+
+    // A coarse copy of each drawing is enough to tell a dark room, a lit screen, and a white flare apart,
+    // and a few of its pixels, copied as they are, whether only the 1-bit screen shows.
+    const size = 24
+    const smallCanvas = () =>
+      /** @type {CanvasRenderingContext2D} */ (
+        Object.assign(document.createElement('canvas'), { width: size, height: size }).getContext('2d', { willReadFrequently: true })
+      )
+    const copy = smallCanvas()
+    const pixelsAt = smallCanvas()
+    pixelsAt.imageSmoothingEnabled = false
+    /** How the scene's latest drawing looks, if there is one. */
+    const look = () => {
+      const scene = document.querySelector('[data-testid="intro-scene"]')
+      if (!(scene instanceof HTMLCanvasElement && scene.width > 0 && scene.height > 0)) return undefined
+      copy.drawImage(scene, 0, 0, size, size)
+      const pixels = copy.getImageData(0, 0, size, size).data
+      let darkest = 255
+      let brightest = 0
+      for (let i = 0; i < pixels.length; i += 4) {
+        const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3
+        darkest = Math.min(darkest, brightness)
+        brightest = Math.max(brightest, brightness)
+      }
+      pixelsAt.drawImage(scene, 0, 0, size, size)
+      const levels = [...pixelsAt.getImageData(0, 0, size, size).data].filter((_, i) => i % 4 !== 3)
+      const black = levels.filter((level) => level <= 8).length
+      const white = levels.filter((level) => level >= 247).length
+      const oneBit = black > 0 && white > 0 && black + white === levels.length
+      const box = scene.getBoundingClientRect()
+      const fillsWindow = box.left <= 0 && box.top <= 0 && box.right >= innerWidth && box.bottom >= innerHeight
+      return { time: performance.now(), darkest, brightest, fillsWindow, oneBit }
+    }
+    Object.assign(window, { lookAtIntroScene: look })
+
+    // Each drawing of the scene starts by clearing it, and is read back once finished, before anything else
+    // happens, however slowly the browser draws.
+    let readQueued = false
+    for (const { prototype } of [WebGLRenderingContext, WebGL2RenderingContext]) {
+      const clear = prototype.clear
+      prototype.clear = /** @param {number} mask */ function (mask) {
+        clear.call(this, mask)
+        if (readQueued) return
+        readQueued = true
+        queueMicrotask(() => {
+          readQueued = false
+          const frame = look()
+          if (frame) watched.frames.push(frame)
+        })
+      }
+    }
+  })
+}
+
+/**
+ * What has been seen of the Intro's 3D scene so far, since watchIntroScene started watching.
+ * @param {import('@playwright/test').Page} page
+ */
+async function introScene(page) {
+  return page.evaluate(() => {
+    const { contexts, frames } = /** @type {{ introSceneWatched: { contexts: WebGLRenderingContext[], frames: IntroSceneFrame[] } }} */ (
+      /** @type {unknown} */ (window)
+    ).introSceneWatched
+    return {
+      contextsMade: contexts.length,
+      contextsReleased: contexts.filter((context) => context.isContextLost()).length,
+      /** when the scene was first drawn with its screen lit, by the page's clock */
+      litAt: frames.find(({ brightest }) => brightest > 60)?.time,
+      /** whether a frame showed a lit screen in a dark room: bright and black parts together */
+      showedLitMacintosh: frames.some(({ darkest, brightest }) => brightest > 100 && darkest < 30),
+      /** whether the screen alone covered the whole browser window, before it flared */
+      screenCoveredWindow: frames.some(({ oneBit, fillsWindow }) => fillsWindow && oneBit),
+      /** whether the screen flared white over the whole browser window, once it covered it */
+      flaredOverWindow: frames.some(
+        ({ darkest, fillsWindow }, i) => fillsWindow && darkest > 235 && frames.slice(0, i).some(({ oneBit }) => oneBit),
+      ),
+    }
+  })
+}
+
 /**
  * Visits the portfolio as a browser arriving at it would, leaving the Intro or Short Boot to play.
  * The address is relative, so it works wherever the portfolio is served: GitHub Pages serves it below a path.
@@ -385,6 +515,10 @@ async function expectWebOptimized(page, image, maxBytes) {
 }
 
 module.exports = {
+  THREE_JS,
+  watchThreeJsRequests,
+  watchIntroScene,
+  introScene,
   SECTIONS,
   PHONE_NUMBER,
   PHONES,

@@ -887,87 +887,20 @@ html[data-intro] .intro {
   position: fixed;
   z-index: 10;
   inset: 0;
-  /* Centered even where the Macintosh is wider than a phone, before it shrinks into the distance. */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: var(--dither);
+  /* The dark room the full Intro's 3D Macintosh powers on in, dark while three.js loads. */
+  background: var(--ink);
   overflow: hidden;
   /* A swipe on the Intro doesn't scroll the portfolio hidden under it. */
   touch-action: none;
 }
 
-/* The full Intro starts with the Macintosh in the distance, still dark: js/intro.js zooms in from here. */
-html[data-intro='full'] .intro__macintosh {
-  opacity: 0;
-  transform: scale(0.45);
-}
-
-/* An original, code-drawn compact computer, which the full Intro boots and zooms into until its screen
-/* is the visitor's whole screen. */
-.intro__macintosh {
-  /* Its height before it zooms into the screen. */
-  --mac-height: min(96vh, 60rem);
-  flex: none;
-  width: calc(var(--mac-height) * 0.78);
-  height: var(--mac-height);
-  display: flex;
-  flex-direction: column;
-  background: var(--paper);
-  border: var(--rule) solid var(--ink);
-  border-radius: 1.25rem 1.25rem 0.5rem 0.5rem;
-  box-shadow: 0.5rem 0.5rem 0 var(--ink);
-}
-
-.intro__bezel {
-  flex: 0 0 78%;
-  min-height: 0;
-  display: flex;
-  margin: 6% 7% 0;
-  padding: 5%;
-  border: var(--rule) solid var(--ink);
-  border-radius: 0.75rem;
-}
-
-.intro__screen {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: var(--dither);
-  border: var(--rule) solid var(--ink);
-  border-radius: 1rem / 1.25rem;
-  overflow: hidden;
-}
-
-.intro__chin {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 14%;
-}
-
-.intro__floppy-slot {
-  width: 30%;
-  height: 0.6rem;
-  border: var(--rule) solid var(--ink);
-  border-radius: 0.3rem;
-}
-
-/* The screen's dark glass, before it powers on. */
-.intro__glass {
+/* The full Intro's 3D scene, drawn by js/intro-scene.js across the whole browser window. */
+.intro__scene {
   position: absolute;
   inset: 0;
-  background: var(--ink);
-}
-
-.intro__happy-computer {
-  width: 30%;
-  height: auto;
-  opacity: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 /* The Short Boot draws no Macintosh: the visitor's whole screen is the one that powers on. */
@@ -980,19 +913,24 @@ html[data-intro='full'] .intro__macintosh {
   background: var(--dither);
 }
 
-html[data-intro='short'] .intro__macintosh {
-  display: none;
-}
-
 html[data-intro='short'] .intro__boot-screen {
   display: flex;
 }
 
-.intro__boot-screen .intro__happy-computer {
-  width: clamp(4rem, 15vmin, 8rem);
+/* The screen's dark glass, before it powers on. */
+.intro__glass {
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
 }
 
-/* Once the Intro has zoomed into the screen, the portfolio shows through. */
+.intro__happy-computer {
+  width: clamp(4rem, 15vmin, 8rem);
+  height: auto;
+  opacity: 0;
+}
+
+/* Once the full Intro has entered the screen, the portfolio shows through. */
 html[data-intro-phase='typing'] .intro__stage {
   pointer-events: none;
 }

@@ -1,6 +1,22 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { menuBarSoundControl, introSoundControl, skipControl, visitPortfolio, openPortfolio, tabToNext } = require('./support/portfolio')
+const {
+  menuBarSoundControl,
+  introSoundControl,
+  skipControl,
+  visitPortfolio,
+  openPortfolio,
+  tabToNext,
+  watchIntroScene,
+  introScene,
+} = require('./support/portfolio')
+
+/**
+ * @typedef {object} SoundHeard
+ * @property {number} time when it began, by the page's clock (performance.now())
+ * @property {number | undefined} screenBrightness how bright the full Intro's 3D scene was then, from 0 to
+ *   255 at its brightest part, if the page was watched with watchIntroScene and the scene showed
+ */
 
 /**
  * Listens to the page from the moment it starts loading, noting each sound it makes. A chime is several
@@ -9,16 +25,28 @@ const { menuBarSoundControl, introSoundControl, skipControl, visitPortfolio, ope
  */
 async function listenForChimes(page) {
   await page.addInitScript(() => {
-    /** @type {number[]} when each audible sound began */
+    /** @type {SoundHeard[]} each audible sound */
     const sounds = []
     Object.assign(window, { soundsHeard: sounds })
     const start = AudioScheduledSourceNode.prototype.start
     AudioScheduledSourceNode.prototype.start = /** @param {Parameters<typeof start>} args */ function (...args) {
       // A suspended context makes no sound: the browser has not let the page play audio yet.
-      if (this.context.state === 'running') sounds.push(performance.now())
+      if (this.context.state === 'running') {
+        const look = /** @type {{ lookAtIntroScene?: () => { brightest: number } | undefined }} */ (window).lookAtIntroScene
+        sounds.push({ time: performance.now(), screenBrightness: look?.()?.brightest })
+      }
       return start.apply(this, args)
     }
   })
+}
+
+/**
+ * The chimes the page has played so far: the first sound of each.
+ * @param {import('@playwright/test').Page} page
+ */
+async function chimes(page) {
+  const sounds = await page.evaluate(() => /** @type {{ soundsHeard: SoundHeard[] }} */ (/** @type {unknown} */ (window)).soundsHeard)
+  return sounds.filter((sound, i) => i === 0 || sound.time - sounds[i - 1].time > 250)
 }
 
 /**
@@ -26,8 +54,7 @@ async function listenForChimes(page) {
  * @param {import('@playwright/test').Page} page
  */
 async function chimesHeard(page) {
-  const sounds = await page.evaluate(() => /** @type {{ soundsHeard: number[] }} */ (/** @type {unknown} */ (window)).soundsHeard)
-  return sounds.filter((time, i) => i === 0 || time - sounds[i - 1] > 250).length
+  return (await chimes(page)).length
 }
 
 /**
@@ -57,10 +84,10 @@ async function blockAutoplay(page) {
 }
 
 /**
- * Waits until the Intro or Short Boot has started up its screen, when its chime would sound.
+ * Waits until the Short Boot has started up its screen, when its chime would sound.
  * @param {import('@playwright/test').Page} page
  */
-async function waitForStartUp(page) {
+async function waitForShortBootStartUp(page) {
   // Checked every animation frame: the Short Boot shows its smiling computer only briefly.
   await page.waitForFunction(
     () =>
@@ -70,6 +97,15 @@ async function waitForStartUp(page) {
     undefined,
     { polling: 'raf', timeout: 10_000 },
   )
+}
+
+/**
+ * Waits until the full Intro has powered on its 3D Macintosh's screen, when its chime would sound.
+ * The page must be watched with watchIntroScene from before it loads.
+ * @param {import('@playwright/test').Page} page
+ */
+async function waitForPowerOn(page) {
+  await expect.poll(async () => (await introScene(page)).litAt, { message: 'the screen powers on', timeout: 10_000 }).toBeDefined()
 }
 
 /**
@@ -96,9 +132,10 @@ test.describe('Sound for a first-time visitor', () => {
 
   test('stays silent while the Intro starts up the Macintosh', async ({ page }) => {
     await listenForChimes(page)
+    await watchIntroScene(page)
     await visitPortfolio(page)
 
-    await waitForStartUp(page)
+    await waitForPowerOn(page)
     await skipControl(page).click()
 
     expect(await chimesHeard(page)).toBe(0)
@@ -106,8 +143,9 @@ test.describe('Sound for a first-time visitor', () => {
 
   test('plays the chime once the visitor turns it on during the Intro, which plays on', async ({ page }) => {
     await listenForChimes(page)
+    await watchIntroScene(page)
     await visitPortfolio(page)
-    await waitForStartUp(page)
+    await waitForPowerOn(page)
 
     await introSoundControl(page).click()
 
@@ -172,6 +210,28 @@ test.describe('Sound in the Menu Bar', () => {
   })
 })
 
+test.describe('Sound for a first-time visitor who turned it on while visiting a Section', () => {
+  test('rings the chime as the full Intro powers on the 3D Macintosh’s screen', async ({ page }) => {
+    // A link to a Section opens it with no Intro, so the next visit still gets the full Intro.
+    await visitPortfolio(page, '#projects')
+    await menuBarSoundControl(page).click()
+    await expect(menuBarSoundControl(page)).toHaveAttribute('aria-pressed', 'true')
+
+    await listenForChimes(page)
+    await watchIntroScene(page)
+    await visitPortfolio(page)
+    await waitForPowerOn(page)
+
+    await expect.poll(() => chimesHeard(page)).toBe(1)
+    // The screen is lit as the chime rings, and the chime isn't left until long after: within a few frames,
+    // however slowly the browser draws.
+    const [chime] = await chimes(page)
+    expect(chime.screenBrightness, 'brightest part of the 3D scene as the chime rings').toBeGreaterThan(20)
+    const poweredOnAt = Number((await introScene(page)).litAt)
+    expect(chime.time - poweredOnAt, 'milliseconds the chime rings after the screen is first seen lit').toBeLessThan(500)
+  })
+})
+
 test.describe('Sound for a returning visitor', () => {
   test('who turned it on hears the chime with the Short Boot', async ({ page }) => {
     await turnSoundOnInIntro(page)
@@ -180,7 +240,7 @@ test.describe('Sound for a returning visitor', () => {
     await visitPortfolio(page)
 
     await expect(introSoundControl(page)).toHaveAttribute('aria-pressed', 'true')
-    await waitForStartUp(page)
+    await waitForShortBootStartUp(page)
     await expect.poll(() => chimesHeard(page)).toBe(1)
   })
 
@@ -190,7 +250,7 @@ test.describe('Sound for a returning visitor', () => {
     await blockAutoplay(page)
     await listenForChimes(page)
     await visitPortfolio(page)
-    await waitForStartUp(page)
+    await waitForShortBootStartUp(page)
     expect(await chimesHeard(page), 'withheld until the visitor interacts').toBe(0)
 
     await skipControl(page).click()
@@ -207,7 +267,7 @@ test.describe('Sound for a returning visitor', () => {
     await visitPortfolio(page)
 
     await expect(introSoundControl(page)).toHaveAttribute('aria-pressed', 'false')
-    await waitForStartUp(page)
+    await waitForShortBootStartUp(page)
     await skipControl(page).click()
     expect(await chimesHeard(page)).toBe(0)
   })

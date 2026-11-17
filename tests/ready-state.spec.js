@@ -1,6 +1,6 @@
 // @ts-check
 const { test, expect } = require('@playwright/test')
-const { openPortfolio, section } = require('./support/portfolio')
+const { openPortfolio, visitPortfolio, skipControl, section, THREE_JS } = require('./support/portfolio')
 
 const HEADLINE = 'Software Engineer — Data & Platform'
 
@@ -37,15 +37,23 @@ test.describe('ready state', () => {
 })
 
 test.describe('animation runtime', () => {
-  test('loads no Lottie, Bodymovin, or other remote animation runtime', async ({ page }) => {
+  test('loads no Lottie, Bodymovin, or other remote animation runtime, and three.js from the site itself', async ({
+    page,
+  }) => {
     /** @type {import('@playwright/test').Request[]} */
     const requests = []
     page.on('request', (request) => requests.push(request))
 
-    await openPortfolio(page, '', { waitUntil: 'networkidle' })
+    // The full Intro, which alone loads three.js, plays until its 3D Macintosh is drawn.
+    const threeJsLoaded = page.waitForResponse((response) => THREE_JS.test(response.url()))
+    await visitPortfolio(page)
+    await page.waitForFunction(() => document.querySelector('canvas'))
+    await skipControl(page).click()
+    await page.waitForLoadState('networkidle')
     await expect(page.getByRole('heading', { level: 1, name: 'Isaac Dobson' })).toBeVisible()
 
     const siteOrigin = new URL(page.url()).origin
+    expect(new URL((await threeJsLoaded).url()).origin, 'three.js comes from').toBe(siteOrigin)
     const remoteCode = requests
       .filter((request) => ['script', 'fetch', 'xhr'].includes(request.resourceType()))
       .filter((request) => new URL(request.url()).origin !== siteOrigin)

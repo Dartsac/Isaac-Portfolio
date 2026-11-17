@@ -13,6 +13,10 @@ const {
   skipControl,
   introSoundControl,
   largestColorDifference,
+  THREE_JS,
+  watchThreeJsRequests,
+  watchIntroScene,
+  introScene,
 } = require('./support/portfolio')
 
 const NAME = 'Isaac Dobson'
@@ -26,7 +30,13 @@ const HEADLINE = 'Software Engineer — Data & Platform'
  */
 async function expectReady(page, { timeout } = {}) {
   await expect(skipControl(page)).toBeHidden({ timeout })
-  await expect(page.getByTestId('intro-macintosh')).toBeHidden()
+  // The 3D scene is gone, and released, so nothing of it keeps drawing.
+  await expect(page.locator('canvas')).toHaveCount(0)
+  const watchingScene = await page.evaluate(() => 'introSceneWatched' in window)
+  if (watchingScene) {
+    const { contextsMade, contextsReleased } = await introScene(page)
+    expect(contextsReleased, 'WebGL contexts released').toBe(contextsMade)
+  }
   const macWindow = page.getByRole('main')
   await expect(macWindow.getByRole('heading', { level: 1, name: NAME, exact: true })).toBeVisible()
   await expect(macWindow.getByText(HEADLINE, { exact: true })).toBeVisible()
@@ -36,20 +46,20 @@ async function expectReady(page, { timeout } = {}) {
 /**
  * @typedef {object} IntroRecording what a visitor saw of the Intro, sampled every animation frame
  * @property {{ line: 'name' | 'headline', text: string }[]} typed each change in the typed name or Headline, in order
- * @property {number[]} macintoshHeights the on-screen height of the Intro's Macintosh while it showed
- * @property {boolean} enteredScreen whether the Intro's Macintosh's screen has covered the whole browser window
  * @property {boolean[]} bootScreenCovered for each frame the Intro showed, whether the Short Boot's screen covered the whole browser window
  * @property {boolean} smiled whether the Intro has shown its smiling computer
  */
 
 /**
- * Records, from the moment the page starts loading, what the Intro shows on each animation frame.
+ * Records, from the moment the page starts loading, what the Intro shows on each animation frame, its
+ * 3D scene included (see introScene).
  * @param {import('@playwright/test').Page} page
  */
 async function recordIntro(page) {
+  await watchIntroScene(page)
   await page.addInitScript(() => {
     /** @type {IntroRecording} */
-    const recording = { typed: [], macintoshHeights: [], enteredScreen: false, bootScreenCovered: [], smiled: false }
+    const recording = { typed: [], bootScreenCovered: [], smiled: false }
     Object.assign(window, { introRecording: recording })
     /** @type {Record<string, string | null>} */
     const last = {}
@@ -73,11 +83,6 @@ async function recordIntro(page) {
         if (text !== null && text !== last[line]) recording.typed.push({ line, text })
         last[line] = text
       }
-      const macintosh = document.querySelector('[data-testid="intro-macintosh"]')
-      if (macintosh && shows(macintosh)) {
-        recording.macintoshHeights.push(macintosh.getBoundingClientRect().height)
-        if (coversWindow(macintosh.querySelector('[data-testid="intro-screen"]'))) recording.enteredScreen = true
-      }
       if (shows(document.querySelector('.intro__stage'))) {
         recording.bootScreenCovered.push(coversWindow(document.querySelector('[data-testid="intro-boot-screen"]')))
       }
@@ -98,7 +103,7 @@ async function introRecording(page) {
 }
 
 /**
- * Waits until the Intro or Short Boot greets the visitor with its smiling computer.
+ * Waits until the Short Boot greets the visitor with its smiling computer.
  * @param {import('@playwright/test').Page} page
  */
 async function expectSmilingComputer(page) {
@@ -106,13 +111,13 @@ async function expectSmilingComputer(page) {
 }
 
 /**
- * Expects the full Intro to be playing: its Macintosh appeared in the distance and is starting up.
+ * Expects the full Intro to be playing: its 3D Macintosh has powered on, lit by its screen in a dark room.
  * @param {import('@playwright/test').Page} page
  */
 async function expectFullIntroStarted(page) {
-  await expectSmilingComputer(page)
-  const { macintoshHeights } = await introRecording(page)
-  expect(macintoshHeights[0], 'the Macintosh starts in the distance').toBeLessThan((page.viewportSize()?.height ?? 0) * 0.6)
+  await expect
+    .poll(async () => (await introScene(page)).showedLitMacintosh, { message: 'the 3D Macintosh powers on', timeout: 10_000 })
+    .toBe(true)
 }
 
 /**
@@ -134,22 +139,24 @@ function expectTypedOut(typed, line, text) {
 
 /**
  * Opens the portfolio and expects the Short Boot: a screen covering the whole browser window from the
- * first frame starts up with its smiling computer and goes straight to the ready state, with no Macintosh
- * shown and nothing typed.
+ * first frame starts up with its smiling computer and goes straight to the ready state, with no 3D
+ * Macintosh, no three.js, and nothing typed.
  * @param {import('@playwright/test').Page} page
  */
 async function expectShortBoot(page) {
   await recordIntro(page)
+  const threeJsRequests = watchThreeJsRequests(page)
   await visitPortfolio(page)
 
   await expect(skipControl(page)).toBeVisible()
   await expectSmilingComputer(page)
   await expectReady(page)
 
-  const { typed, macintoshHeights, bootScreenCovered } = await introRecording(page)
+  const { typed, bootScreenCovered } = await introRecording(page)
   expect(bootScreenCovered.length, 'frames of the Short Boot').toBeGreaterThan(0)
   expect(bootScreenCovered, 'the screen covers the browser window in every frame').not.toContain(false)
-  expect(macintoshHeights, 'frames showing a Macintosh').toEqual([])
+  expect((await introScene(page)).contextsMade, 'WebGL contexts made').toBe(0)
+  expect(threeJsRequests, 'three.js requests').toEqual([])
   expect(typed, 'nothing typed').toEqual([])
 }
 
@@ -161,7 +168,6 @@ async function expectShortBoot(page) {
 async function expectReadyWithoutMotion(page) {
   // Checked once, straight away: nothing has to finish first.
   expect(await skipControl(page).isVisible(), 'skip control shown').toBe(false)
-  expect(await page.getByTestId('intro-macintosh').isVisible(), 'Intro Macintosh shown').toBe(false)
   await expectReady(page)
   const introAnimations = await page.evaluate(
     () => document.getAnimations().filter((animation) => animation.effect?.getTiming().iterations !== Infinity).length,
@@ -205,10 +211,11 @@ async function waitWhileNameTyped(page, typed) {
 
 test.describe('Intro for a first-time visitor', () => {
   test('can be skipped with the pointer, reaching the ready state', async ({ page }) => {
+    await watchIntroScene(page)
     await visitPortfolio(page)
 
     await expect(skipControl(page)).toBeVisible()
-    await expect(page.getByTestId('intro-macintosh')).toBeVisible()
+    await expectFullIntroStarted(page)
     await skipControl(page).click()
 
     await expectReady(page)
@@ -224,7 +231,9 @@ test.describe('Intro for a first-time visitor', () => {
   }
 
   test('ends when a keyboard visitor moves on past its controls, so focus is never hidden', async ({ page }) => {
+    await watchIntroScene(page)
     await visitPortfolio(page)
+    await expectFullIntroStarted(page)
     await tabToNext(page)
     await expect(skipControl(page)).toBeFocused()
     await tabToNext(page)
@@ -238,6 +247,7 @@ test.describe('Intro for a first-time visitor', () => {
   })
 
   test('ends when the visitor chooses a Section while the name is typed', async ({ page }) => {
+    await watchIntroScene(page)
     await visitPortfolio(page)
     await waitWhileNameTyped(page, 'I')
 
@@ -259,7 +269,7 @@ test.describe('Intro for a first-time visitor', () => {
     await visitPortfolio(page)
 
     // While the Macintosh boots…
-    await expectSmilingComputer(page)
+    await expectFullIntroStarted(page)
     await expectNameAndHeadlineAsText()
 
     // …and halfway through typing the name.
@@ -273,18 +283,24 @@ for (const layout of LAYOUTS) {
   test.describe(`Intro for a first-time visitor on ${layout.name}`, () => {
     useLayout(layout)
 
-    test('boots the Macintosh, zooms until its screen is the whole screen, and types Isaac’s name and then the Headline', async ({
+    test('boots the 3D Macintosh, enters its screen as it flares white, and types Isaac’s name and then the Headline', async ({
       page,
     }) => {
       await recordIntro(page)
+      const threeJsRequests = watchThreeJsRequests(page)
       await visitPortfolio(page)
 
-      // The Macintosh boots in the distance, greeting the visitor with a smiling computer.
+      // The Macintosh powers on in a dark room, lit by its screen.
       await expectFullIntroStarted(page)
       await expectReady(page, { timeout: 15_000 })
 
-      const { typed, enteredScreen } = await introRecording(page)
-      expect(enteredScreen, 'the Macintosh’s screen covers the whole browser window').toBe(true)
+      const siteOrigin = new URL(page.url()).origin
+      expect(threeJsRequests.length, 'three.js requests').toBeGreaterThan(0)
+      for (const request of threeJsRequests) expect(new URL(request).origin, request).toBe(siteOrigin)
+      const { screenCoveredWindow, flaredOverWindow } = await introScene(page)
+      expect(screenCoveredWindow, 'the screen alone covers the whole browser window').toBe(true)
+      expect(flaredOverWindow, 'then flares white over it').toBe(true)
+      const { typed } = await introRecording(page)
       expectTypedOut(typed, 'name', NAME)
       expectTypedOut(typed, 'headline', HEADLINE)
       const nameDone = typed.findIndex(({ line, text }) => line === 'name' && text === NAME)
@@ -317,6 +333,68 @@ for (const layout of LAYOUTS) {
   })
 }
 
+/**
+ * Ways a visitor ends the Intro before it has played out, while the Intro has focus or the pointer. (The
+ * Menu Bar can't be pressed until the name is typed: until then the Intro's dark room covers it.)
+ * @type {{ name: string, end: (page: import('@playwright/test').Page) => Promise<unknown> }[]}
+ */
+const EARLY_ENDINGS = [
+  { name: 'skipping with the pointer', end: (page) => skipControl(page).click() },
+  {
+    name: 'skipping from the keyboard',
+    end: async (page) => {
+      await tabToNext(page)
+      await page.keyboard.press('Enter')
+    },
+  },
+  {
+    name: 'tabbing past its controls',
+    end: async (page) => {
+      for (let i = 0; i < 3; i++) await tabToNext(page)
+    },
+  },
+  { name: 'asking for reduced motion', end: (page) => page.emulateMedia({ reducedMotion: 'reduce' }) },
+]
+
+test.describe('Intro while three.js is still loading', () => {
+  for (const { name, end } of EARLY_ENDINGS) {
+    test(`ends at once on ${name}, and its 3D scene never shows once three.js arrives`, async ({ page }) => {
+      await watchIntroScene(page)
+      /** @type {() => void} */
+      let deliverThreeJs = () => {}
+      const delivered = new Promise((resolve) => (deliverThreeJs = () => resolve(undefined)))
+      await page.route(THREE_JS, async (route) => {
+        await delivered
+        await route.continue()
+      })
+      const threeJsRequested = page.waitForRequest((request) => THREE_JS.test(request.url()))
+      // WebKit may hold the page's load event for three.js, which is held back here.
+      await visitPortfolio(page, '', { waitUntil: 'domcontentloaded' })
+      await threeJsRequested
+
+      // Ending while three.js is held back shows the Intro doesn't wait for it.
+      await end(page)
+      await expectReady(page)
+
+      deliverThreeJs()
+      await page.waitForLoadState('networkidle')
+      await expect(page.locator('canvas')).toHaveCount(0)
+      expect((await introScene(page)).contextsMade, 'WebGL contexts made').toBe(0)
+    })
+  }
+})
+
+test.describe('Intro whose 3D scene fails to load', () => {
+  test('ends in the ready state', async ({ page }) => {
+    await watchIntroScene(page)
+    await page.route(THREE_JS, (route) => route.fulfill({ status: 404 }))
+    await visitPortfolio(page)
+
+    await expectReady(page)
+    expect((await introScene(page)).contextsMade, 'WebGL contexts made').toBe(0)
+  })
+})
+
 test.describe('Intro on a touch screen', () => {
   // Playwright can only swipe in Chromium, so on the Android phone.
   useLayout(/** @type {import('./support/portfolio').Layout} */ (PHONES.find(({ name }) => name === 'Pixel 7')))
@@ -324,7 +402,7 @@ test.describe('Intro on a touch screen', () => {
   test('leaves the portfolio at its start when the visitor swipes during the Intro', async ({ page }) => {
     await recordIntro(page)
     await visitPortfolio(page)
-    await expectSmilingComputer(page)
+    await expectFullIntroStarted(page)
 
     // A real touch swipe up the screen, as if to read on.
     await swipeUp(page)
@@ -376,10 +454,13 @@ test.describe('Short Boot for a returning visitor', () => {
 
 test.describe('Intro for a visitor following a link to a Section', () => {
   test('steps aside, opening right at the Section', async ({ page }) => {
+    const threeJsRequests = watchThreeJsRequests(page)
     await visitPortfolio(page, '#projects', { waitUntil: 'domcontentloaded' })
 
     await expectReadyWithoutMotion(page)
     await expect(section(page, 'Projects')).toBeInViewport()
+    await page.waitForLoadState('networkidle')
+    expect(threeJsRequests, 'three.js requests').toEqual([])
   })
 
   test('still plays in full on the visitor’s next visit to the portfolio itself', async ({ page }) => {
@@ -465,10 +546,13 @@ for (const { name, storage } of WITHHELD_STORAGE) {
 test.describe('Intro for a visitor who prefers reduced motion', () => {
   test.use({ reducedMotion: 'reduce' })
 
-  test('shows the ready state immediately on a first visit', async ({ page }) => {
+  test('shows the ready state immediately on a first visit, without loading three.js', async ({ page }) => {
+    const threeJsRequests = watchThreeJsRequests(page)
     await visitPortfolio(page, '', { waitUntil: 'domcontentloaded' })
 
     await expectReadyWithoutMotion(page)
+    await page.waitForLoadState('networkidle')
+    expect(threeJsRequests, 'three.js requests').toEqual([])
   })
 
   test('shows the ready state immediately on a return visit, rather than the Short Boot', async ({ page }) => {
@@ -487,7 +571,7 @@ test.describe('Intro for a visitor who prefers reduced motion', () => {
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await recordIntro(page)
     await visitPortfolio(page)
-    await expectSmilingComputer(page)
+    await expectFullIntroStarted(page)
 
     await page.emulateMedia({ reducedMotion: 'reduce' })
 

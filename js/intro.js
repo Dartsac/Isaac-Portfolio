@@ -1,7 +1,7 @@
 // @ts-check
-// Intro: boots an original compact Macintosh, zooms into its screen until it is the visitor's whole
-// screen, the Mac Desktop, and types Isaac's name and Headline in the Mac Window. Every way through it,
-// played out or skipped, ends in the same ready state: the page exactly as it is without this script.
+// Intro: boots an original compact Macintosh in 3D (js/intro-scene.js), enters its screen until it is the
+// visitor's whole screen, the Mac Desktop, and types Isaac's name and Headline in the Mac Window. Every way
+// through it, played out or skipped, ends in the same ready state: the page exactly as it is without this script.
 //
 // This script runs before the page is first drawn, so the Intro covers the portfolio from the first frame.
 // It marks the page with data-intro, the kind of Intro playing, and the stylesheet shows the Intro only then.
@@ -118,43 +118,6 @@ function finishIntro() {
 }
 
 /**
- * Where elements sit on screen without a transform.
- * @param {HTMLElement} transformed the element whose transform to set aside
- * @param {Element[]} elements it, or things inside it
- */
-function untransformedBoxes(transformed, elements) {
-  const transform = transformed.style.transform
-  transformed.style.transform = 'none'
-  const boxes = elements.map((element) => element.getBoundingClientRect())
-  transformed.style.transform = transform
-  return boxes
-}
-
-/**
- * The transform that zooms the Intro's Macintosh until its screen, inside its border, covers the whole
- * browser window, which is then the Mac Desktop.
- * @param {HTMLElement} macintosh
- * @param {HTMLElement} screen the Intro's Macintosh's screen
- */
-function zoomedIntoScreen(macintosh, screen) {
-  // A pixel past each edge, so the browser's rounding of the transformed screen can't leave a hairline.
-  const target = new DOMRect(-1, -1, window.innerWidth + 2, window.innerHeight + 2)
-  const [frame, outline] = untransformedBoxes(macintosh, [macintosh, screen])
-  const from = new DOMRect(
-    outline.x + screen.clientLeft,
-    outline.y + screen.clientTop,
-    screen.clientWidth,
-    screen.clientHeight,
-  )
-  const scale = Math.max(target.width / from.width, target.height / from.height)
-  // Scaling about the Macintosh's center, then moving its screen's center onto the target's.
-  const center = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 }
-  const x = target.x + target.width / 2 - center.x - scale * (from.x + from.width / 2 - center.x)
-  const y = target.y + target.height / 2 - center.y - scale * (from.y + from.height / 2 - center.y)
-  return `translate(${x}px, ${y}px) scale(${scale})`
-}
-
-/**
  * Prepares a line of the ready title to be typed: its text stays in place, unseen, for assistive
  * technology and for layout, while a decorative copy over it shows only what has been typed so far.
  * @param {HTMLElement} line
@@ -196,85 +159,68 @@ function prepareTyping(line, testId) {
   }
 }
 
-/**
- * The Intro's artwork, drawn over the portfolio while the Intro plays. The screen that powers on is the
- * Macintosh's in the full Intro, and the visitor's whole screen in the Short Boot.
- */
-function introArtwork() {
-  const screen = /** @type {HTMLElement} */ (
-    document.querySelector(root.dataset.intro === 'short' ? '.intro__boot-screen' : '.intro__screen')
-  )
-  return {
-    stage: /** @type {HTMLElement} */ (document.querySelector('.intro__stage')),
-    macintosh: /** @type {HTMLElement} */ (document.querySelector('.intro__macintosh')),
-    screen,
-    glass: /** @type {HTMLElement} */ (screen.querySelector('.intro__glass')),
-    happyComputer: /** @type {Element} */ (screen.querySelector('.intro__happy-computer')),
-  }
+/** The Intro's artwork, drawn over the portfolio while the Intro plays. */
+function introStage() {
+  return /** @type {HTMLElement} */ (document.querySelector('.intro__stage'))
 }
 
-/**
- * The screen powers on with a flicker (and the startup chime), and greets the visitor with a smiling computer while it starts up.
- * @param {ReturnType<typeof introArtwork>} artwork
- * @param {number} greetingMs how long the smiling computer shows
- */
-async function powerOn({ glass, happyComputer }, greetingMs) {
-  // js/sound.js rings the startup chime here, for visitors who turned sound on.
+/** The original smiling computer that greets the visitor as a screen starts up. */
+function happyComputer() {
+  return /** @type {SVGSVGElement} */ (document.querySelector('.intro__happy-computer'))
+}
+
+/** Announces that a screen powers on: js/sound.js rings the Startup Chime then, for visitors who turned sound on. */
+function announcePowerOn() {
   document.dispatchEvent(new Event('intro:power-on'))
+}
+
+/** The artwork fades away, showing the portfolio on the Mac Desktop. */
+function fadeIntoPortfolio() {
+  return play(introStage(), [{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'ease-in' })
+}
+
+/** The Short Boot: the visitor's own dark screen powers on with a flicker and opens straight onto the portfolio. */
+async function playShortBoot() {
+  const glass = /** @type {HTMLElement} */ (document.querySelector('.intro__boot-screen .intro__glass'))
+  await pause(150)
+  announcePowerOn()
   await play(glass, [{ opacity: 1 }, { opacity: 0.2 }, { opacity: 0.8 }, { opacity: 0.1 }, { opacity: 0 }], {
     duration: 450,
   })
-  await play(happyComputer, [{ opacity: 1 }], { duration: 0 })
-  await pause(greetingMs)
-  await play(happyComputer, [{ opacity: 0 }], { duration: 0 })
-}
-
-/**
- * The artwork fades away, showing the portfolio on the Mac Desktop.
- * @param {ReturnType<typeof introArtwork>} artwork
- */
-function fadeIntoPortfolio({ stage }) {
-  return play(stage, [{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'ease-in' })
-}
-
-/** The Short Boot: the visitor's dark screen starts up and opens straight onto the portfolio. */
-async function playShortBoot() {
-  const artwork = introArtwork()
-  await pause(150)
-  await powerOn(artwork, 700)
-  await fadeIntoPortfolio(artwork)
+  // The smiling computer greets the visitor while it starts up.
+  await play(happyComputer(), [{ opacity: 1 }], { duration: 0 })
+  await pause(700)
+  await play(happyComputer(), [{ opacity: 0 }], { duration: 0 })
+  await fadeIntoPortfolio()
   finishIntro()
 }
 
 /**
- * The full Intro: the Macintosh boots in the distance, the view zooms into its screen, and Isaac's name
- * and Headline are typed into the Mac Window before the rest of the portfolio appears.
+ * The full Intro: in a dark room, the 3D Macintosh's screen powers on, the view enters it as it flares
+ * white, and Isaac's name and Headline are typed into the Mac Window before the rest of the portfolio appears.
  */
 async function playFullIntro() {
-  const artwork = introArtwork()
-  const { macintosh, screen } = artwork
   const name = /** @type {HTMLElement} */ (document.querySelector('.ready-title__name'))
   const headline = /** @type {HTMLElement} */ (document.querySelector('.ready-title__headline'))
   const restOfMacWindow = document.querySelectorAll('.mac-window__content > :not(.ready-title)')
 
-  // The Macintosh appears in the distance, its screen dark, and starts up.
-  await play(macintosh, [{ opacity: 0 }, { opacity: 1 }], { duration: 500, easing: 'ease-out' })
+  // Only now is three.js loaded, with the scene, while the visitor waits in the dark. Ending the Intro
+  // meanwhile stops the scene from being built, and releases a scene already built.
+  const { createIntroScene } = await import('./intro-scene.js')
+  const scene = await createIntroScene(introStage(), happyComputer(), stopIntro.signal)
   await pause(300)
-  await powerOn(artwork, 1300)
-  await pause(250)
 
-  // Zoom into its screen until it is the visitor's whole screen, from the distance the stylesheet sets.
-  const distant = getComputedStyle(macintosh).transform
-  await play(macintosh, [{ transform: distant }, { transform: zoomedIntoScreen(macintosh, screen) }], {
-    duration: 1400,
-    easing: 'cubic-bezier(0.65, 0, 0.25, 1)',
-  })
+  // The screen powers on, lighting the room, and the smiling computer greets the visitor.
+  await scene.powerOn(announcePowerOn)
+  await pause(1300)
+  await scene.enter(1400)
 
   // The Mac Window opens, empty but for a caret, and Isaac's name and the Headline are typed into it.
   const typeName = prepareTyping(name, 'typed-name')
   const typeHeadline = prepareTyping(headline, 'typed-headline')
   root.dataset.introPhase = 'typing'
-  await fadeIntoPortfolio(artwork)
+  await fadeIntoPortfolio()
+  scene.release()
   await typeName(85)
   await pause(300)
   await typeHeadline(40)
