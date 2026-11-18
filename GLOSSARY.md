@@ -5,7 +5,7 @@ A personal portfolio presented as if visitors are using a classic black-and-whit
 ## Experience
 
 **Intro**:
-The opening sequence in which a 3D compact Macintosh boots in a dark room lit only by its screen, the view circles in and through the screen, and Isaac's name and Headline are typed.
+The opening sequence in which a 3D compact Macintosh boots in a dark room lit only by its screen, the view swings round to face that screen and moves in until it fills the visitor's, the screen crossfades into the Mac Desktop, and Isaac's name and Headline are typed.
 _Avoid_: Splash screen, loader, Lottie
 
 **Short Boot**:
