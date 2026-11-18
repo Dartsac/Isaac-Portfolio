@@ -1,8 +1,10 @@
 // @ts-check
 // The full Intro's 3D scene: a Macintosh in a dark room, lit only by its screen. js/intro.js loads this
 // module, and three.js with it, only when the full Intro plays, and sets the pace: the screen powers on
-// with the smiling computer, shows the Mac Desktop the visitor is about to enter, then the view moves in
-// until the screen fills the browser window, showing the Mac Desktop as large as the live page will.
+// with the smiling computer, then the view swings round from the front right to face the screen while it
+// moves in, as the old Lottie's did, and on its way the screen shows the Mac Desktop the visitor is about to
+// enter. The view lands where the screen fills the browser window, showing the Mac Desktop as large as the
+// live page will.
 //
 // The Macintosh, its keyboard, and its mouse are original, built here from simple shapes with the
 // proportions of the era's compact Macintosh, in grayscale, with no logo, badge, or other Apple-owned detail.
@@ -38,8 +40,6 @@ const KEY_ROWS = [
 const MOUSE = { width: 0.62, length: 1.05, height: 0.3 }
 /** Where the keyboard and mouse sit, how far ahead of the Macintosh's front and to the side. */
 const DESK_LAYOUT = { keyboardAhead: 1.2, mouse: { x: 2.2, ahead: 1.15, turn: -0.15 } }
-/** How far the things on the desk reach to either side of the Macintosh's middle, out to the mouse. */
-const DESK_REACH = DESK_LAYOUT.mouse.x + MOUSE.width / 2 + 0.1
 
 /** Grayscale only: off-white plastic, darker keys and details, a dim desk. */
 const GRAYS = { plastic: 0xdcdcdc, keys: 0x6e6e6e, button: 0xa8a8a8, panel: 0xb4b4b4, dark: 0x262626, slot: 0x050505, desk: 0x7c7c7c }
@@ -72,6 +72,27 @@ const ENTERED_SPAN = 0.95
 const LANDING_MARGIN = 0.01
 /** The view's vertical angle, in degrees. */
 const FIELD_OF_VIEW = 35
+/**
+ * Where the view starts, as the old Lottie's does: low, at the front right of the Macintosh as the visitor faces
+ * it, three-quarter on. Its eye's height above the desk, a little below the screen, and how far round it is from
+ * straight ahead, in degrees.
+ */
+const VIEW_START = { height: 1.3, turn: 32 }
+/**
+ * How much of the view the Macintosh, keyboard, and mouse fill as it starts, across or down from its middle to its
+ * edges, whichever they reach first: the dark room frames them.
+ */
+const START_FILL = 0.85
+/**
+ * How far through its movement the view has swung round to face the screen square, level with where it lands. From
+ * then on it only moves in, so it lands with no angle, tilt, or roll left.
+ */
+const SWING_ENDS = 0.65
+/**
+ * How long the view holds back from moving in: the higher, the longer it keeps the Macintosh whole in view while it
+ * swings round, and the faster it closes in after, as the old Lottie's did. 1 moves in evenly throughout.
+ */
+const MOVE_IN_DELAY = 1.5
 /** The screen's brightness, from 0, dark, to 1, as it powers on with a flicker, lit from its first frame. */
 const FLICKER = [0.8, 0.2, 0.9, 1]
 const FLICKER_MS = 450
@@ -688,7 +709,65 @@ function macintoshOnDesk(picture, displayPattern) {
   const showOnScreen = (picture) => {
     screenMaterial.map = picture
   }
-  return { setup, screenCenter, front, lightScreen, showOnScreen }
+  return { setup, screenCenter, lightScreen, showOnScreen }
+}
+
+/** The corners of boxes around the Macintosh, its keyboard, and its mouse: what the view starts with in view. */
+function cornersOnDesk() {
+  const front = CASE.depth / 2
+  /** @param {number[]} xs @param {number[]} ys @param {number[]} zs */
+  const box = (xs, ys, zs) => xs.flatMap((x) => ys.flatMap((y) => zs.map((z) => new THREE.Vector3(x, y, z))))
+  const keyboardZ = front + DESK_LAYOUT.keyboardAhead
+  const mouse = { x: DESK_LAYOUT.mouse.x, z: front + DESK_LAYOUT.mouse.ahead, reach: MOUSE.length / 2 }
+  return [
+    ...box([-CASE.width / 2, CASE.width / 2], [0, CASE.plinth + CASE.height], [-front, front]),
+    ...box([-KEYBOARD.width / 2, KEYBOARD.width / 2], [0, KEYBOARD.back], [keyboardZ - KEYBOARD.depth / 2, keyboardZ + KEYBOARD.depth / 2]),
+    ...box([mouse.x - mouse.reach, mouse.x + mouse.reach], [0, MOUSE.height], [mouse.z - mouse.reach, mouse.z + mouse.reach]),
+  ]
+}
+
+/**
+ * Where the view starts for a browser window's shape: low at the front right, three-quarter on (VIEW_START), as
+ * near as shows the Macintosh, keyboard, and mouse whole, with them across the middle of it, and the screen as
+ * near the middle of it as that allows, as in a window taller than it is wide.
+ * @param {number} aspect the browser window's width over its height
+ * @param {THREE.Vector3} screenCenter the middle of the Macintosh's screen
+ */
+function startingView(aspect, screenCenter) {
+  const corners = cornersOnDesk()
+  const view = new THREE.PerspectiveCamera(FIELD_OF_VIEW, aspect)
+  const turn = THREE.MathUtils.degToRad(VIEW_START.turn)
+  const target = new THREE.Box3().setFromPoints(corners).getCenter(new THREE.Vector3())
+  const projected = new THREE.Box3()
+  /** Places the view so far back from what it looks at, and tells how much of it the corners fill. @param {number} distance */
+  const fillFrom = (distance) => {
+    view.position.set(target.x + distance * Math.sin(turn), VIEW_START.height, target.z + distance * Math.cos(turn))
+    view.lookAt(target)
+    view.updateMatrixWorld()
+    projected.setFromPoints(corners.map((corner) => corner.clone().project(view)))
+    return Math.max(-projected.min.x, projected.max.x, -projected.min.y, projected.max.y)
+  }
+  /** Places the view as near as shows them all. */
+  const fit = () => {
+    let [near, far] = [1, 100]
+    while (far - near > 0.01) {
+      const distance = (near + far) / 2
+      if (fillFrom(distance) > START_FILL) near = distance
+      else far = distance
+    }
+    fillFrom(far)
+  }
+  fit()
+  // Then turned to have them where they belong in the view, which moves them a little, so again.
+  for (let round = 0; round < 2; round++) {
+    const middle = projected.getCenter(new THREE.Vector3())
+    const screen = screenCenter.clone().project(view)
+    middle.y = THREE.MathUtils.clamp(screen.y, projected.max.y - START_FILL, projected.min.y + START_FILL)
+    middle.z = target.clone().project(view).z
+    target.copy(middle.unproject(view))
+    fit()
+  }
+  return { position: view.position.clone(), target }
 }
 
 /**
@@ -738,39 +817,45 @@ export async function createIntroScene(stage, { happyComputer, macDesktop }, sig
   renderer.shadowMap.needsUpdate = true
 
   const scene = new THREE.Scene()
-  const { setup, screenCenter, front, lightScreen, showOnScreen } = macintoshOnDesk(smilingComputer, displayPattern)
+  const { setup, screenCenter, lightScreen, showOnScreen } = macintoshOnDesk(smilingComputer, displayPattern)
   const camera = new THREE.PerspectiveCamera(FIELD_OF_VIEW, 1, 0.01, 100)
   scene.add(setup, camera)
 
-  /** How far the view has moved in, from 0, the whole Macintosh in view, to 1, its screen covering the window. */
+  /**
+   * How far the view has moved, from 0, low at the front right with the whole Macintosh in view, to 1, square
+   * to its screen, which covers the window.
+   */
   let approach = 0
+  /** Where the view starts, for the browser window's shape. */
+  let start = startingView(camera.aspect, screenCenter)
 
-  /** Places the view for the browser window's shape. */
+  /**
+   * Places the view on its way to the screen: it swings round to face it square while it moves in, rising level
+   * with where it lands, then only moves in, until the screen covers the window.
+   */
   const placeCamera = () => {
-    const slope = Math.tan(THREE.MathUtils.degToRad(FIELD_OF_VIEW / 2))
-    /** How far back the view is, to see the whole of something so wide and so tall. */
-    const whole = (/** @type {number} */ width, /** @type {number} */ height) =>
-      Math.max(height / 2 / slope, width / 2 / (slope * camera.aspect))
-    // From a little above, looking down onto the desk, with the Macintosh, keyboard, and mouse in view: the
-    // Macintosh's height at its front, and the desk's reach to either side at the keyboard's front edge,
-    // nearer the view.
-    const nearest = front + DESK_LAYOUT.keyboardAhead + KEYBOARD.depth / 2
-    const far = {
-      y: CASE.height * 0.8,
-      lookY: CASE.height * 0.4,
-      distance: Math.max(front + whole(0, CASE.height * 1.45), nearest + whole(DESK_REACH * 2.2, 0)),
-    }
     // Where the view lands: the screen covers the whole window, showing the part of its picture the Mac
     // Desktop is laid out in, as large as the live page, so that no edge of the Macintosh shows.
+    const slope = Math.tan(THREE.MathUtils.degToRad(FIELD_OF_VIEW / 2))
     const landed = landingArea(camera.aspect)
-    const covered = screenCenter.z + (landed.height * SCREEN.height) / 2 / slope
-    const landing = screenCenter.y + SCREEN.height * (0.5 - landed.top - landed.height / 2)
+    const landing = new THREE.Vector3(0, screenCenter.y + SCREEN.height * (0.5 - landed.top - landed.height / 2), screenCenter.z)
+    const covered = (landed.height * SCREEN.height) / 2 / slope
 
-    const eased = THREE.MathUtils.smoothstep(approach, 0, 1)
-    // Level with, and facing, where it lands on the screen well before it covers the window.
-    const level = Math.min(eased * 2, 1)
-    camera.position.set(0, THREE.MathUtils.lerp(far.y, landing, level), THREE.MathUtils.lerp(far.distance, covered, eased))
-    camera.lookAt(0, THREE.MathUtils.lerp(far.lookY, landing, level), 0)
+    // Round the line through where it lands, square to the screen: how far round the view is, how far out, and
+    // how high. It moves in by shares of the way left, so what it looks at grows as steadily up close as from
+    // afar, easing out of the start and into the landing.
+    const from = start.position.clone().sub(landing)
+    const swung = THREE.MathUtils.smoothstep(approach, 0, SWING_ENDS)
+    const movedIn = THREE.MathUtils.smoothstep(approach ** MOVE_IN_DELAY, 0, 1)
+    const turn = Math.atan2(from.x, from.z) * (1 - swung)
+    const outset = Math.hypot(from.x, from.z)
+    const distance = outset * (covered / outset) ** movedIn
+    camera.position.set(
+      landing.x + distance * Math.sin(turn),
+      THREE.MathUtils.lerp(start.position.y, landing.y, swung),
+      landing.z + distance * Math.cos(turn),
+    )
+    camera.lookAt(start.target.clone().lerp(landing, swung))
   }
 
   /** @type {{ ms: number, step: (progress: number) => void, done: () => void, start?: number } | undefined} */
@@ -799,6 +884,7 @@ export async function createIntroScene(stage, { happyComputer, macDesktop }, sig
     displayPattern.patternHeight.value = canvas.height
     camera.aspect = canvas.clientWidth / Math.max(canvas.clientHeight, 1)
     camera.updateProjectionMatrix()
+    start = startingView(camera.aspect, screenCenter)
     return true
   }
 
@@ -914,8 +1000,9 @@ export async function createIntroScene(stage, { happyComputer, macDesktop }, sig
     },
 
     /**
-     * The view moves in until the screen covers the whole browser window, showing the Mac Desktop as large as
-     * the live page, and stops there, so the screen can crossfade into the page. The motion ends on a drawn
+     * The view swings round from the front right to face the screen while it moves in, until the screen covers
+     * the whole browser window, showing the Mac Desktop as large as the live page, and stops there, square to
+     * it, so the screen can crossfade into the page. The motion ends on a drawn
      * frame, so however slowly the browser draws, the screen is seen covering the window.
      * @param {number} ms
      */

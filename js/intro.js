@@ -264,13 +264,12 @@ async function playFullIntro() {
   }
   await pause(300)
 
-  // The screen powers on, lighting the room, and the smiling computer greets the visitor. Then the screen
+  // The screen powers on, lighting the room, and the smiling computer greets the visitor: about a second from
+  // darkness. Then the view swings round and moves in for about three seconds, and on its way the screen
   // shows the Mac Desktop they are about to enter: the Menu Bar, and the Mac Window, empty but for a caret.
   await scene.powerOn(announcePowerOn)
-  await pause(650)
-  scene.showMacDesktop()
-  await pause(650)
-  await scene.enter(1400)
+  await pause(250)
+  await Promise.all([scene.enter(3000), pause(400).then(() => scene.showMacDesktop())])
 
   // The screen crossfades into the page, the Mac Window open and empty but for the caret the view landed on,
   // and Isaac's name and the Headline are typed into it.

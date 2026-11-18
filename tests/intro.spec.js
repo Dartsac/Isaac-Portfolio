@@ -22,6 +22,7 @@ const {
   watchIntroScene,
   introScene,
   lookAtScreenLanding,
+  lookAtScreenLandingRows,
 } = require('./support/portfolio')
 
 const NAME = 'Isaac Dobson'
@@ -50,7 +51,8 @@ async function expectReady(page, { timeout } = {}) {
 
 /**
  * @typedef {object} IntroRecording what a visitor saw of the Intro, sampled every animation frame
- * @property {{ line: 'name' | 'headline', text: string }[]} typed each change in the typed name or Headline, in order
+ * @property {{ line: 'name' | 'headline', text: string, time: number }[]} typed each change in the typed name or Headline,
+ *   in order, and when it showed, by the page's clock
  * @property {number | undefined} shownAt when the Intro first showed, by the page's clock (performance.now())
  * @property {{ time: number, covered: boolean }[]} bootScreen for each frame the Short Boot's screen showed: when, by
  *   the page's clock, and whether it covered the whole browser window
@@ -87,7 +89,7 @@ async function recordIntro(page) {
     const sample = () => {
       for (const line of /** @type {const} */ (['name', 'headline'])) {
         const text = document.querySelector(`[data-testid="typed-${line}"]`)?.textContent ?? null
-        if (text !== null && text !== last[line]) recording.typed.push({ line, text })
+        if (text !== null && text !== last[line]) recording.typed.push({ line, text, time: performance.now() })
         last[line] = text
       }
       if (shows(document.querySelector('.intro__stage'))) {
@@ -197,6 +199,36 @@ async function expectLandedOnWholeMenuBar(page) {
     const landed = /** @type {{ brightness: number[] }} */ (await lookAtScreenLanding(page, area))
     expect(Math.min(...landed.brightness), `something drawn at the 3D Menu Bar’s ${name} end`).toBeLessThan(250)
   }
+}
+
+/**
+ * Expects the view to have landed square to the 3D screen, with nothing left of its swing round to face it: at
+ * each end of the browser window, the 3D Menu Bar's rule is where the live one's is, so it runs level, as the
+ * live one does. A view left at an angle, tilted, or rolled would show it slanting, or higher or lower.
+ * @param {import('@playwright/test').Page} page
+ */
+async function expectLandedSquare(page) {
+  const liveRule = await menuBar(page).evaluate(
+    (bar) => bar.getBoundingClientRect().bottom - parseFloat(getComputedStyle(bar).borderBottomWidth),
+  )
+  const { width } = /** @type {{ width: number }} */ (page.viewportSize())
+  // Narrow strips at the window's ends, clear of the Menu Bar's menus: white down to the rule.
+  const strip = 8
+  /** @type {number[]} */
+  const rules = []
+  for (const { name, x } of [
+    { name: 'left', x: 2 },
+    { name: 'right', x: width - 2 - strip },
+  ]) {
+    const rows = await lookAtScreenLandingRows(page, { x, y: 0, width: strip, height: liveRule + 12 })
+    expect(rows, 'the screen alone covers the whole browser window').toBeDefined()
+    const found = /** @type {{ y: number, brightness: number }[]} */ (rows).find(({ brightness }) => brightness < 64)
+    expect(found, `the 3D Menu Bar’s rule at the window’s ${name} end`).toBeDefined()
+    const rule = /** @type {{ y: number }} */ (found).y
+    expect(Math.abs(rule - liveRule), `CSS pixels from the live rule at the window’s ${name} end`).toBeLessThanOrEqual(1.5)
+    rules.push(rule)
+  }
+  expect(Math.abs(rules[0] - rules[1]), 'CSS pixels between the 3D rule’s ends: level').toBeLessThanOrEqual(1)
 }
 
 /**
@@ -399,6 +431,26 @@ test.describe('Intro for a first-time visitor', () => {
     expect(await atHandoff.jsonValue()).toEqual({ caretShown: true, typed: '' })
   })
 
+  test('lands on its screen about 4 seconds in, a second of power-on and three of moving in, and types Isaac’s name straight after', async ({
+    page,
+  }) => {
+    await recordIntro(page)
+    await visitPortfolio(page)
+    await expectReady(page, { timeout: 15_000 })
+
+    // Timed from the screen lighting, a moment after the dark scene first appears. How long that first dark
+    // frame takes to draw is up to the graphics, so the moment after it is not timed.
+    const { litAt, landedAt } = await introScene(page)
+    const { typed } = await introRecording(page)
+    expect(litAt, 'the screen lights').toBeDefined()
+    expect(landedAt, 'the view lands on the screen').toBeDefined()
+    const landing = /** @type {number} */ (landedAt) - /** @type {number} */ (litAt)
+    expect(landing, 'milliseconds from the screen lighting to the landing').toBeGreaterThan(3_400)
+    expect(landing, 'milliseconds from the screen lighting to the landing').toBeLessThan(4_400)
+    const typingStarts = typed[0].time - /** @type {number} */ (landedAt)
+    expect(typingStarts, 'milliseconds from the landing to the first letter typed').toBeLessThan(800)
+  })
+
   test('keeps Isaac’s name and Headline available as text throughout, even while they are typed', async ({ page }) => {
     // Read once, at that moment: a retrying assertion could pass only after the Intro had ended.
     const expectNameAndHeadlineAsText = async () => {
@@ -485,28 +537,32 @@ for (const layout of LAYOUTS) {
         expectCrisp(grayShare)
       })
 
-      test('lands on its screen’s Menu Bar reaching both ends of the window, from the first menu to the sound control, as the live one does', async ({
+      test('lands square on its screen’s Menu Bar, reaching both ends of the window from the first menu to the sound control, as the live one does', async ({
         page,
       }) => {
         await watchIntroScene(page)
         await visitPortfolio(page)
         await expectReady(page, { timeout: 15_000 })
 
+        await expectLandedSquare(page)
         await expectLandedOnWholeMenuBar(page)
       })
     }
 
-    test('is dark until its screen powers on, then lit by the screen’s glow, in shades of gray', async ({ page }) => {
+    test('is dark until its screen powers on, then lit by the screen’s glow with the whole Macintosh in view, in shades of gray', async ({
+      page,
+    }) => {
       await watchIntroScene(page)
       await visitPortfolio(page)
 
       await expectFullIntroStarted(page)
       await expectReady(page, { timeout: 15_000 })
 
-      const { framesBeforePowerOn, darkUntilPowerOn, litBelowScreen, gray } = await introScene(page)
+      const { framesBeforePowerOn, darkUntilPowerOn, litBelowScreen, framedByDarkRoom, gray } = await introScene(page)
       expect(framesBeforePowerOn, 'frames drawn before the screen powers on').toBeGreaterThan(0)
       expect(darkUntilPowerOn, 'nothing shows until the screen powers on').toBe(true)
       expect(litBelowScreen, 'the screen lights the keyboard and desk below it as it powers on').toBe(true)
+      expect(framedByDarkRoom, 'the whole Macintosh in view, nothing lit cut off at the window’s top or sides').toBe(true)
       expect(gray, 'every frame drawn is in shades of gray').toBe(true)
     })
 
@@ -540,7 +596,7 @@ test.describe('Intro for a first-time visitor on a narrow window drawn at one de
   // than a phone's screen.
   test.use({ viewport: { width: 700, height: 1000 }, deviceScaleFactor: 1 })
 
-  test('lands on its screen crisp, in pure black and white, with its whole Menu Bar', async ({ page }) => {
+  test('lands square on its screen, crisp, in pure black and white, with its whole Menu Bar', async ({ page }) => {
     await watchIntroScene(page)
     await visitPortfolio(page)
     await expectReady(page, { timeout: 15_000 })
@@ -548,6 +604,7 @@ test.describe('Intro for a first-time visitor on a narrow window drawn at one de
     const screenAsLanded = await lookAtScreenLanding(page)
     expect(screenAsLanded, 'the screen alone covers the whole browser window').toBeDefined()
     expectCrisp(/** @type {{ grayShare: number }} */ (screenAsLanded).grayShare)
+    await expectLandedSquare(page)
     await expectLandedOnWholeMenuBar(page)
   })
 })
@@ -555,7 +612,7 @@ test.describe('Intro for a first-time visitor on a narrow window drawn at one de
 test.describe('Intro for a first-time visitor whose window changes shape as it plays', () => {
   test.use({ viewport: { width: 1280, height: 720 } })
 
-  test('lands on its screen’s Menu Bar drawn for the window’s new shape', async ({ page }) => {
+  test('lands square on its screen’s Menu Bar drawn for the window’s new shape', async ({ page }) => {
     await watchIntroScene(page)
     await visitPortfolio(page)
     await expectFullIntroStarted(page)
@@ -564,6 +621,7 @@ test.describe('Intro for a first-time visitor whose window changes shape as it p
     await page.setViewportSize({ width: 700, height: 1000 })
 
     await expectReady(page, { timeout: 15_000 })
+    await expectLandedSquare(page)
     await expectLandedOnWholeMenuBar(page)
   })
 

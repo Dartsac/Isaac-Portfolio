@@ -86,6 +86,8 @@ function watchThreeJsRequests(page) {
  * @property {boolean} gray whether every pixel looked at was a shade of gray, with no color
  * @property {number} brightestBelow the brightness, from 0 to 255, of the brightest part of its lower 40%, below
  *   the screen while the whole Macintosh is in view
+ * @property {number} brightestAtEdges the brightness, from 0 to 255, of the brightest part along its top edge and
+ *   down its sides to halfway, where the lit desk below can't reach: dark if nothing lit is cut off there
  */
 
 /** How many cells across and down a coarse picture of an area has (see lookAt). */
@@ -157,14 +159,27 @@ async function watchIntroScene(page) {
     // The last drawing in which the screen alone covered the browser window: where the view landed on it.
     const landing = smallCanvas(0)
     /**
+     * The pixels of an area of the window as the view landed on the screen, the area in the drawing's pixels, and
+     * how many of them there are to a CSS pixel.
+     * @param {{ x: number, y: number, width: number, height: number }} clip
+     */
+    const pixelsAtLanding = ({ x, y, width, height }) => {
+      const scale = landing.canvas.width / innerWidth
+      const area = {
+        x: Math.round(x * scale),
+        y: Math.round(y * scale),
+        width: Math.max(1, Math.round(width * scale)),
+        height: Math.max(1, Math.round(height * scale)),
+      }
+      return { pixels: landing.getImageData(area.x, area.y, area.width, area.height).data, area, scale }
+    }
+    /**
      * A coarse picture of an area of the window as the view landed on the screen, as lookAt takes of the page.
      * @param {{ x: number, y: number, width: number, height: number }} clip
      */
-    const lookAtLanding = ({ x, y, width, height }) => {
+    const lookAtLanding = (clip) => {
       if (landing.canvas.width === 0) return undefined
-      const scale = landing.canvas.width / innerWidth
-      const area = { x: Math.round(x * scale), y: Math.round(y * scale), width: Math.round(width * scale), height: Math.round(height * scale) }
-      const pixels = landing.getImageData(area.x, area.y, area.width, area.height).data
+      const { pixels, area } = pixelsAtLanding(clip)
       const sums = new Array(grid * grid).fill(0)
       const counts = new Array(grid * grid).fill(0)
       let grays = 0
@@ -177,7 +192,21 @@ async function watchIntroScene(page) {
       }
       return { brightness: sums.map((sum, cell) => sum / counts[cell]), grayShare: grays / (pixels.length / 4) }
     }
-    Object.assign(window, { lookAtIntroSceneLanding: lookAtLanding })
+    /**
+     * The brightness of each of the drawing's rows across an area of the window as the view landed on the screen,
+     * from its top down, each with where its top is in the window.
+     * @param {{ x: number, y: number, width: number, height: number }} clip
+     */
+    const rowsAtLanding = (clip) => {
+      if (landing.canvas.width === 0) return undefined
+      const { pixels, area, scale } = pixelsAtLanding(clip)
+      return Array.from({ length: area.height }, (_, row) => {
+        let sum = 0
+        for (let i = row * area.width * 4; i < (row + 1) * area.width * 4; i += 4) sum += (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3
+        return { y: (area.y + row) / scale, brightness: sum / area.width }
+      })
+    }
+    Object.assign(window, { lookAtIntroSceneLanding: lookAtLanding, lookAtIntroSceneLandingRows: rowsAtLanding })
     /** How the scene's latest drawing looks, if there is one. */
     const look = () => {
       const scene = document.querySelector('[data-testid="intro-scene"]')
@@ -187,11 +216,16 @@ async function watchIntroScene(page) {
       let darkest = 255
       let brightest = 0
       let brightestBelow = 0
+      let brightestAtEdges = 0
       for (let i = 0; i < pixels.length; i += 4) {
         const brightness = (pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3
         darkest = Math.min(darkest, brightness)
         brightest = Math.max(brightest, brightness)
         if (i / 4 >= size * size * 0.6) brightestBelow = Math.max(brightestBelow, brightness)
+        const [column, row] = [(i / 4) % size, Math.floor(i / 4 / size)]
+        if (row === 0 || (row < size / 2 && (column === 0 || column === size - 1))) {
+          brightestAtEdges = Math.max(brightestAtEdges, brightness)
+        }
       }
       pixelsAt.drawImage(scene, 0, 0, size, size)
       const levels = [...pixelsAt.getImageData(0, 0, size, size).data].filter((_, i) => i % 4 !== 3)
@@ -206,7 +240,7 @@ async function watchIntroScene(page) {
       const box = scene.getBoundingClientRect()
       const fillsWindow = box.left <= 0 && box.top <= 0 && box.right >= innerWidth && box.bottom >= innerHeight
       if (oneBit && fillsWindow) copyWhole(landing, scene)
-      return { time: performance.now(), darkest, brightest, brightestBelow, fillsWindow, oneBit, gray }
+      return { time: performance.now(), darkest, brightest, brightestBelow, brightestAtEdges, fillsWindow, oneBit, gray }
     }
     Object.assign(window, { lookAtIntroScene: look })
 
@@ -247,6 +281,24 @@ async function lookAtScreenLanding(page, clip) {
 }
 
 /**
+ * Looks at each row of the drawing across an area of the browser window as the view landed on the Intro's 3D
+ * screen (see lookAtScreenLanding), finer than a coarse picture can: to tell where a line a pixel or two thick is.
+ * @param {import('@playwright/test').Page} page
+ * @param {ScreenArea} clip
+ * @returns {Promise<{ y: number, brightness: number }[] | undefined>} each row, from the top: where its top is in
+ *   the window, and its average brightness, from 0 to 255; nothing if the screen never covered the window
+ */
+async function lookAtScreenLandingRows(page, clip) {
+  return page.evaluate(
+    (clip) =>
+      /** @type {{ lookAtIntroSceneLandingRows: (clip: ScreenArea) => { y: number, brightness: number }[] | undefined }} */ (
+        /** @type {unknown} */ (window)
+      ).lookAtIntroSceneLandingRows(clip),
+    clip,
+  )
+}
+
+/**
  * What has been seen of the Intro's 3D scene so far, since watchIntroScene started watching.
  * @param {import('@playwright/test').Page} page
  */
@@ -256,6 +308,7 @@ async function introScene(page) {
       /** @type {unknown} */ (window)
     ).introSceneWatched
     const beforePowerOn = frames.filter(({ time }) => poweredOnAt === undefined || time < poweredOnAt)
+    const asPoweredOn = frames.find(({ time }) => poweredOnAt !== undefined && time >= poweredOnAt)
     return {
       contextsMade: contexts.length,
       contextsReleased: contexts.filter((context) => context.isContextLost()).length,
@@ -266,11 +319,18 @@ async function introScene(page) {
       /** whether every frame drawn before the screen powered on was black: nothing shows but by its light */
       darkUntilPowerOn: beforePowerOn.every(({ brightest }) => brightest < 8),
       /** whether, as the screen first lit, with the whole Macintosh in view, its light showed what is below it */
-      litBelowScreen: (frames.find(({ time }) => poweredOnAt !== undefined && time >= poweredOnAt)?.brightestBelow ?? 0) > 60,
+      litBelowScreen: (asPoweredOn?.brightestBelow ?? 0) > 60,
+      /**
+       * whether, as the screen first lit, the dark room framed what it lit along the window's top and sides:
+       * nothing lit, such as the Macintosh's case, was cut off by the window's edges
+       */
+      framedByDarkRoom: (asPoweredOn?.brightestAtEdges ?? 255) < 12,
       /** whether every frame drawn was in shades of gray, with no color */
       gray: frames.every(({ gray }) => gray),
       /** when the scene was first drawn with its screen lit, by the page's clock */
       litAt: frames.find(({ brightest }) => brightest > 60)?.time,
+      /** when the view landed on the screen, by the page's clock: the last frame in which the screen alone covered the window */
+      landedAt: frames.filter(({ oneBit, fillsWindow }) => fillsWindow && oneBit).at(-1)?.time,
       /** whether a frame showed a lit screen in a dark room: bright and black parts together */
       showedLitMacintosh: frames.some(({ darkest, brightest }) => brightest > 100 && darkest < 30),
       /** whether the screen alone covered the whole browser window, before it flared */
@@ -614,6 +674,7 @@ module.exports = {
   watchIntroScene,
   introScene,
   lookAtScreenLanding,
+  lookAtScreenLandingRows,
   SECTIONS,
   PHONE_NUMBER,
   PHONES,
