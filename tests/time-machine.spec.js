@@ -22,6 +22,9 @@ const TOGGLES = [
   CNN_ART,
 ]
 
+/** How far, in pixels, a focused toggle's ring reaches past it: its 4px paper-colored box-shadow (style.css). */
+const TOGGLE_FOCUS_RING = 4
+
 /**
  * Finds a 1-bit image by its alternative text, scrolled into view and loaded.
  * @param {import('@playwright/test').Page} page
@@ -45,7 +48,8 @@ async function areaOf(image) {
 
 /**
  * The image's area above any Full color toggle drawn over it, so the toggle doesn't count as picture: neither a
- * pressed toggle nor its label, whose text Chromium on Linux draws with colored subpixel antialiasing.
+ * pressed toggle nor its label, whose text Chromium on Linux draws with colored subpixel antialiasing, nor the
+ * focus ring a toggle pressed from the keyboard draws a few pixels around itself.
  * @param {import('@playwright/test').Page} page
  * @param {import('@playwright/test').Locator} image
  */
@@ -56,7 +60,7 @@ async function pictureAreaOf(page, image) {
     const box = await toggle.boundingBox()
     const overlaps =
       box && box.x < area.x + area.width && box.x + box.width > area.x && box.y < bottom && box.y + box.height > area.y
-    if (box && overlaps) bottom = Math.min(bottom, box.y)
+    if (box && overlaps) bottom = Math.min(bottom, box.y - TOGGLE_FOCUS_RING)
   }
   return { ...area, height: bottom - area.y }
 }
