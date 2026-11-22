@@ -43,7 +43,7 @@ const PROJECTS = [
     year: '2024',
     technologies: ['tmux', 'Shell', 'Python', 'Rust'],
     links: [{ name: 'tmux-pane-clarity on GitHub', href: 'https://github.com/Dartsac/tmux-pane-clarity' }],
-    visuals: [],
+    visuals: [/^tmux with every pane framed/],
   },
 ]
 

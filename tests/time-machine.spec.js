@@ -20,6 +20,7 @@ const TOGGLES = [
   { name: 'Full color headshot', images: ['Isaac Dobson'] },
   { name: 'Full color Crystal home page', images: [/^Crystal prototype home page/] },
   CNN_ART,
+  { name: 'Full color tmux-pane-clarity screenshot', images: [/^tmux with every pane framed/] },
 ]
 
 /** How far, in pixels, a focused toggle's ring reaches past it: its 4px paper-colored box-shadow (style.css). */
