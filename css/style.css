@@ -1013,10 +1013,10 @@ html[data-intro-phase='typing'] .mac-window__content > :not(.ready-title) {
 /******************************************
 /* CRT EFFECTS
 /* The screen's glass, drawn over the whole Mac Desktop: faint scanlines,
-/* edges that dim like a curved tube's, a fine grain that drifts, and a slight
-/* flicker. All of it is faint enough for body text to keep its contrast, and
+/* edges that dim like a curved tube's, and a fine grain of static that drifts.
+/* All of it is faint enough for body text to keep its contrast, and
 /* lets every press and scroll through to the screen below. Visitors who prefer reduced
-/* motion see the grain held still and no flicker.
+/* motion see the grain held still.
 /*******************************************/
 .crt {
   position: fixed;
@@ -1038,16 +1038,6 @@ html[data-intro-phase='typing'] .mac-window__content > :not(.ready-title) {
   background: url('../img/grain.png') 0 0 / 400px 400px;
   opacity: 0.35;
   animation: crt-grain 0.8s steps(1) infinite;
-}
-
-/* Flicker: the whole screen dims, barely, now and then. */
-.crt::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--ink);
-  opacity: 0;
-  animation: crt-flicker 6s steps(1) infinite;
 }
 
 @keyframes crt-grain {
@@ -1077,26 +1067,8 @@ html[data-intro-phase='typing'] .mac-window__content > :not(.ready-title) {
   }
 }
 
-@keyframes crt-flicker {
-  0%,
-  31%,
-  33%,
-  72%,
-  74% {
-    opacity: 0;
-  }
-  30%,
-  73% {
-    opacity: 0.03;
-  }
-  32% {
-    opacity: 0.015;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .crt::before,
-  .crt::after {
+  .crt::before {
     animation: none;
   }
 }

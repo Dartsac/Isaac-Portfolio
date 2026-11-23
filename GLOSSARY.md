@@ -37,7 +37,7 @@ The original sound that accompanies the Intro or Short Boot once a visitor turns
 _Avoid_: Boot sound, Mac chime
 
 **CRT Effects**:
-The faint grain, scanlines, dimmed edges suggesting a curved tube, and flicker drawn over the Mac Desktop. Visitors who prefer reduced motion see them held still.
+The faint grain, scanlines, and dimmed edges suggesting a curved tube drawn over the Mac Desktop. Visitors who prefer reduced motion see them held still.
 _Avoid_: Filter, overlay
 
 **Classic Pointer**:

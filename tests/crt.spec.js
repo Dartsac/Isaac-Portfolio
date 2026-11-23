@@ -109,7 +109,7 @@ for (const layout of LAYOUTS) {
       expect(spread(pixels), 'variation across a blank screen').toBeGreaterThan(0.02)
     })
 
-    test('make the grain and flicker move', async ({ page }) => {
+    test('make the grain move', async ({ page }) => {
       await openPortfolio(page)
       const area = await blankScreenArea(page)
 
@@ -160,7 +160,7 @@ test.describe('CRT effects for a visitor who prefers reduced motion', () => {
     test.describe(`on ${layout.name}`, () => {
       useLayout(layout)
 
-      test('keep the screen’s texture but hold the grain and flicker still', async ({ page }) => {
+      test('keep the screen’s texture but hold the grain still', async ({ page }) => {
         await openPortfolio(page)
         const area = await blankScreenArea(page)
 

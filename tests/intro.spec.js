@@ -285,7 +285,7 @@ async function expectShortBoot(page) {
 
 /**
  * Expects the page to show its ready state the moment it loads, with no Intro playing. (The CRT effects'
- * grain and flicker loop forever, unless the visitor prefers reduced motion: the Intro's motions all end.)
+ * grain loops forever, unless the visitor prefers reduced motion: the Intro's motions all end.)
  * @param {import('@playwright/test').Page} page
  */
 async function expectReadyWithoutMotion(page) {
@@ -570,7 +570,7 @@ for (const layout of LAYOUTS) {
       await visitPortfolio(page)
       await expectReady(page, { timeout: 15_000 })
       await page.mouse.move(0, 0)
-      // The CRT effects' grain and flicker never stop moving: compared at rest.
+      // The CRT effects' grain never stops moving: compared at rest.
       const playedOut = await page.screenshot({ animations: 'disabled' })
 
       await page.evaluate(() => localStorage.clear())
