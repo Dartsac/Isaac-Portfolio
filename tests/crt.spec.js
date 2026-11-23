@@ -134,6 +134,60 @@ for (const layout of LAYOUTS) {
   })
 }
 
+/**
+ * How far an area of the screen is from how it would look with no CRT effects over it.
+ * @param {import('@playwright/test').Page} page
+ * @param {ScreenArea} clip
+ */
+async function crtEffectsOver(page, clip) {
+  const withoutEffects = await page.screenshot({ clip, style: '.crt { display: none; }' })
+  return largestColorDifference(page, await page.screenshot({ clip }), withoutEffects)
+}
+
+for (const layout of LAYOUTS) {
+  test.describe(`CRT effects over the Time Machine on ${layout.name}`, () => {
+    useLayout(layout)
+    // The reveal is instant and the grain still, so each look sees the screen settled.
+    test.use({ reducedMotion: 'reduce' })
+
+    test('leave an image shown in full color crisp, as on a present-day screen, even as it scrolls', async ({ page }) => {
+      await openPortfolio(page)
+      const frame = page.locator('.about__headshot')
+      const headshot = page.getByRole('img', { name: 'Isaac Dobson', exact: true })
+      const toggle = page.getByRole('button', { name: 'Full color headshot', exact: true })
+      await headshot.scrollIntoViewIfNeeded()
+      const picture = await boxOf(headshot)
+      expect(await crtEffectsOver(page, picture), 'the effects over the 1-bit image').toBeGreaterThan(2)
+
+      await frame.click({ position: { x: 20, y: 20 } })
+      await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+      await expect.poll(() => crtEffectsOver(page, picture), 'the effects over the full-color image').toBeLessThanOrEqual(2)
+
+      // Half the image scrolls up under the Mac Window's title bar (on a phone, the stuck Menu Bar and title bar).
+      const titleBar = await boxOf(page.getByTestId('mac-window-title-bar'))
+      const distance = picture.y - (titleBar.y + titleBar.height) + picture.height / 2
+      await page.getByRole('main').evaluate((main, by) => {
+        const scroller = main.scrollHeight > main.clientHeight ? main : document.scrollingElement
+        scroller?.scrollBy(0, by)
+      }, distance)
+      await expect.poll(async () => (await boxOf(headshot)).y).toBeLessThan(picture.y - distance / 2)
+      const scrolled = await boxOf(headshot)
+      const titleBarNow = await boxOf(page.getByTestId('mac-window-title-bar'))
+      const visibleTop = titleBarNow.y + titleBarNow.height
+      const stillShowing = { ...scrolled, y: visibleTop, height: scrolled.y + scrolled.height - visibleTop }
+      await expect.poll(() => crtEffectsOver(page, stillShowing), 'the effects over what still shows').toBeLessThanOrEqual(2)
+      const titleBarOverImage = { ...titleBarNow, x: scrolled.x, width: scrolled.width }
+      expect(await crtEffectsOver(page, titleBarOverImage), 'the effects over the title bar').toBeGreaterThan(2)
+
+      await toggle.focus()
+      await page.keyboard.press('Enter')
+      await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+      expect(await boxOf(headshot), 'the image, where it was').toEqual(scrolled)
+      await expect.poll(() => crtEffectsOver(page, stillShowing), 'the effects over the 1-bit image again').toBeGreaterThan(2)
+    })
+  })
+}
+
 test.describe('CRT effects on the Mac Desktop', () => {
   test('cover the pattern around the Mac Window, out to the edges of the browser window', async ({ page }) => {
     await openPortfolio(page)

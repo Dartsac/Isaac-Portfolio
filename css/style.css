@@ -1016,7 +1016,8 @@ html[data-intro-phase='typing'] .mac-window__content > :not(.ready-title) {
 /* edges that dim like a curved tube's, and a fine grain of static that drifts.
 /* All of it is faint enough for body text to keep its contrast, and
 /* lets every press and scroll through to the screen below. Visitors who prefer reduced
-/* motion see the grain held still.
+/* motion see the grain held still. An image the Time Machine shows in full color is
+/* left clear of it all: js/time-machine.js cuts holes in the glass over it.
 /*******************************************/
 .crt {
   position: fixed;

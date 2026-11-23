@@ -29,7 +29,7 @@ One of the portfolio's major content areas: About, Projects, Technologies, or Co
 _Avoid_: Page, tab
 
 **Time Machine**:
-The lens and Full color toggle that reveal the full-color source behind a 1-bit image. Images in one project figure can change together as a group.
+The lens and Full color toggle that reveal the full-color source behind a 1-bit image. Images in one project figure can change together as a group. Full color forwards an image to present-day viewing, crisp, with no CRT Effects over it; a peek through the lens stays under them.
 _Avoid_: Hover effect, color mode, original (which means "not Apple-owned" elsewhere)
 
 **Startup Chime**:
@@ -37,7 +37,7 @@ The original sound that accompanies the Intro or Short Boot once a visitor turns
 _Avoid_: Boot sound, Mac chime
 
 **CRT Effects**:
-The faint grain, scanlines, and dimmed edges suggesting a curved tube drawn over the Mac Desktop. Visitors who prefer reduced motion see them held still.
+The faint grain, scanlines, and dimmed edges suggesting a curved tube drawn over the Mac Desktop, except over images the Time Machine shows in full color. Visitors who prefer reduced motion see them held still.
 _Avoid_: Filter, overlay
 
 **Classic Pointer**:
