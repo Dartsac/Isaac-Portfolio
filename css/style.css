@@ -1,10 +1,14 @@
 /******************************************
 /* 1-BIT PALETTE AND TYPE
 /* Pure black and white only, in the spirit of a compact Macintosh screen.
+/* Dark Mode draws the same screen inverted: white ink on black paper.
 /*******************************************/
 :root {
   --ink: #000;
   --paper: #fff;
+  color-scheme: light;
+  /* Black whatever the ink: the dark room the Intro's Macintosh powers on in, and its screen's glass. */
+  --darkness: #000;
   --rule: 2px;
   --font-display: ui-monospace, 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
   --font-body: Verdana, 'DejaVu Sans', 'Bitstream Vera Sans', sans-serif;
@@ -20,6 +24,22 @@
   /* 50% checkerboard dither used for the desktop and decorative fills. */
   --dither: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='2' height='2'%3E%3Crect width='2' height='2' fill='%23fff'/%3E%3Cpath d='M0 0h1v1H0zM1 1h1v1H1z'/%3E%3C/svg%3E")
     0 0 / 2px 2px;
+}
+
+/* Dark Mode follows the visitor's system setting, unless they chose otherwise in the Menu Bar (js/dark-mode.js
+/* marks their choice with data-dark-mode). Its checkerboard pattern is its own inverse, so stays as it is. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-dark-mode='off']) {
+    --ink: #fff;
+    --paper: #000;
+    color-scheme: dark;
+  }
+}
+
+:root[data-dark-mode='on'] {
+  --ink: #fff;
+  --paper: #000;
+  color-scheme: dark;
 }
 
 *,
@@ -113,6 +133,7 @@ body {
 .menu-bar__title:focus-visible,
 .menu-bar__easter-egg-opener:focus-visible,
 .menu-bar__restart-button:focus-visible,
+.menu-bar__dark-mode-toggle:focus-visible,
 .menu-bar__sound-toggle:focus-visible {
   outline: var(--rule) solid var(--ink);
   outline-offset: calc(-2 * var(--rule));
@@ -142,10 +163,11 @@ body {
   height: 1em;
 }
 
-/* The Restart and sound controls sit at the far end of the Menu Bar, where a classic menu bar kept its
-/* extras. Restart shows selected (inverted) while pressed, like the first menu. */
+/* The Restart, Dark Mode, and sound controls sit at the far end of the Menu Bar, where a classic menu bar
+/* kept its extras. Restart shows selected (inverted) while pressed, like the first menu. */
 .menu-bar__restart,
-.menu-bar__restart[hidden] + .menu-bar__sound {
+.menu-bar__restart[hidden] + .menu-bar__dark-mode,
+.menu-bar__restart[hidden] + .menu-bar__dark-mode[hidden] + .menu-bar__sound {
   margin-left: auto;
 }
 
@@ -154,13 +176,15 @@ body {
   color: var(--paper);
 }
 
-.menu-bar__restart-icon {
+.menu-bar__restart-icon,
+.menu-bar__dark-mode-icon {
   display: block;
   width: 1em;
   height: 1em;
 }
 
 .menu-bar__restart-button,
+.menu-bar__dark-mode-toggle,
 .menu-bar__sound-toggle {
   display: block;
   padding: var(--menu-title-padding-block) min(0.5rem, 1.5vw);
@@ -169,6 +193,17 @@ body {
   border: 0;
   font: inherit;
   cursor: pointer;
+}
+
+/* On a narrow screen, where Restart has no room (see js/intro.js), the menus sit closer together, so the Dark
+/* Mode and sound controls still fit beside every menu title, even on a small phone. */
+@media (max-width: 30rem) {
+  .menu-bar__title,
+  .menu-bar__easter-egg-opener,
+  .menu-bar__dark-mode-toggle,
+  .menu-bar__sound-toggle {
+    padding-inline: 1vw;
+  }
 }
 
 /******************************************
@@ -304,6 +339,13 @@ body {
   text-align: center;
 }
 
+/* Drawn in ink on paper, rather than in the browser's gray, which Dark Mode would darken. */
+.mac-window__restart-button {
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+
 /* A Section takes focus when the Menu Bar moves a visitor to it, so keyboard and screen-reader
 /* visitors continue from there. It isn't a control, so it shows no focus ring. */
 .section:focus {
@@ -392,6 +434,16 @@ a:focus-visible,
   box-shadow: 1px 1px 0 var(--ink);
   font-family: var(--font-display);
   font-size: 0.85rem;
+}
+
+/* The original smiling computer, drawn in ink on paper, so Dark Mode inverts it. Its paper parts keep white fills
+/* of their own for the copy the Intro's 3D screen draws from it, which has no stylesheet. */
+.happy-computer {
+  color: var(--ink);
+}
+
+.happy-computer__paper {
+  fill: var(--paper);
 }
 
 /* Hidden visually but still read by screen readers. */
@@ -911,7 +963,7 @@ html[data-intro] .intro {
   z-index: 10;
   inset: 0;
   /* The dark room the full Intro's 3D Macintosh powers on in, dark while three.js loads. */
-  background: var(--ink);
+  background: var(--darkness);
   overflow: hidden;
   /* A swipe on the Intro doesn't scroll the portfolio hidden under it. */
   touch-action: none;
@@ -944,7 +996,7 @@ html[data-intro='short'] .intro__boot-screen {
 .intro__glass {
   position: absolute;
   inset: 0;
-  background: var(--ink);
+  background: var(--darkness);
 }
 
 .intro__happy-computer {

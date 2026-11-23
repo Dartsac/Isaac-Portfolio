@@ -21,12 +21,16 @@ The classic window on the Mac Desktop where portfolio content is read and scroll
 _Avoid_: Modal, card, page
 
 **Menu Bar**:
-The persistent classic-Mac menu strip used to move between Sections, reach the Easter Egg, Restart where there is room, and turn the Startup Chime on or off.
+The persistent classic-Mac menu strip used to move between Sections, reach the Easter Egg, Restart where there is room, and turn Dark Mode and the Startup Chime on or off.
 _Avoid_: Navbar, header
 
 **Restart**:
 The control that plays the full Intro again, as on a first visit, from the start of the portfolio. It is offered in the Menu Bar where there is room, and at the end of the Mac Window on every screen, to visitors who don't prefer reduced motion.
 _Avoid_: Replay button, rewatch
+
+**Dark Mode**:
+The Mac Desktop drawn inverted, white on black, as a 1-bit screen can be, through the Intro as well. It follows the visitor's system setting until they turn it on or off themselves, a choice remembered for later visits. Its control is in the Menu Bar on every screen. 1-bit images keep their own drawing, black on white.
+_Avoid_: Theme, night mode, inverted colors
 
 **Section**:
 One of the portfolio's major content areas: About, Projects, Technologies, or Contact.

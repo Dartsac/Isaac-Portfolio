@@ -115,16 +115,28 @@ function blankPicture(width, height) {
 }
 
 /**
- * Makes a picture pure black and white, even where a browser smoothed the edges of its artwork and text, and
- * leaves what is mostly transparent wholly so, for the screen's pattern.
- * @param {CanvasRenderingContext2D} context
+ * Whether the live page is in Dark Mode: its 1-bit screen inverted, white ink on black paper.
+ * @param {HTMLElement} macDesktop the page's Mac Desktop
  */
-function makeOneBit(context) {
+function inDarkMode(macDesktop) {
+  const macWindow = /** @type {HTMLElement} */ (macDesktop.querySelector('.mac-window'))
+  return getComputedStyle(macWindow).backgroundColor === 'rgb(0, 0, 0)'
+}
+
+/**
+ * Makes a picture pure black and white, even where a browser smoothed the edges of its artwork and text, and
+ * leaves what is mostly transparent wholly so, for the screen's pattern. Drawn black on white, as the page's
+ * artwork is without its stylesheet, it is inverted in Dark Mode, as the page shows it.
+ * @param {CanvasRenderingContext2D} context
+ * @param {boolean} darkMode
+ */
+function makeOneBit(context, darkMode) {
   const pixels = context.getImageData(0, 0, context.canvas.width, context.canvas.height)
   const { data } = pixels
   for (let i = 0; i < data.length; i += 4) {
     const opaque = data[i + 3] >= 128
-    data.fill(opaque && data[i] + data[i + 1] + data[i + 2] >= 3 * 128 ? 255 : 0, i, i + 3)
+    const white = opaque && data[i] + data[i + 1] + data[i + 2] >= 3 * 128
+    data.fill(white !== darkMode ? 255 : 0, i, i + 3)
     data[i + 3] = opaque ? 255 : 0
   }
   context.putImageData(pixels, 0, 0)
@@ -156,13 +168,14 @@ async function drawArtwork(context, svg, x, y, size, resolution = size) {
 /**
  * Draws what the screen shows as it powers on: the smiling computer, on the screen's 1-bit pattern.
  * @param {SVGSVGElement} happyComputer the page's smiling computer
+ * @param {boolean} darkMode whether the page is in Dark Mode
  */
-async function smilingComputerPicture(happyComputer) {
+async function smilingComputerPicture(happyComputer, darkMode) {
   const { picture, context } = blankPicture(SCREEN_PIXELS.width, SCREEN_PIXELS.height)
   // Five pixels to each of the artwork's 32, so its edges fall on whole pixels, and centered on the screen.
   const size = 32 * 5
   await drawArtwork(context, happyComputer, (picture.width - size) / 2, (picture.height - size) / 2, size)
-  makeOneBit(context)
+  makeOneBit(context, darkMode)
   return picture
 }
 
@@ -220,8 +233,8 @@ function patternOnlyPicture() {
  * Draws what the screen shows once the Macintosh has started: the Mac Desktop the visitor is about to enter,
  * as the page shows it when Isaac's name is about to be typed. Original 1-bit artwork that mirrors the live
  * Mac Desktop: the Menu Bar's titles and controls, which title is selected, the Mac Window's border and title
- * bar, empty below but for the rule and a caret where the name will be typed. Two pictures, so the caret can
- * blink: with it, and without it.
+ * bar, empty below but for the rule and a caret where the name will be typed, inverted in Dark Mode as the page
+ * is. Two pictures, so the caret can blink: with it, and without it.
  *
  * It is drawn at the live page's own scale, from where each part of it is on the page, in the part of the
  * picture the browser window shows once the view has entered the screen, so the view lands on it as large as
@@ -367,11 +380,12 @@ async function macDesktopPictures(macDesktop, browserWindow) {
   const caret = { x: nameText.left + 0.05 * em, y: nameText.bottom + 0.1 * em - CARET.height * em, width: CARET.width * em, height: CARET.height * em }
 
   context.setTransform(1, 0, 0, 1, 0, 0)
-  makeOneBit(context)
+  const darkMode = inDarkMode(macDesktop)
+  makeOneBit(context, darkMode)
   const withCaret = /** @type {HTMLCanvasElement} */ (picture.cloneNode())
   const withCaretContext = /** @type {CanvasRenderingContext2D} */ (withCaret.getContext('2d'))
   withCaretContext.drawImage(picture, 0, 0)
-  withCaretContext.fillStyle = '#000'
+  withCaretContext.fillStyle = darkMode ? '#fff' : '#000'
   withCaretContext.fillRect(
     Math.round(area.left + caret.x * scale),
     Math.round(area.top + caret.y * scale),
@@ -793,7 +807,7 @@ export async function createIntroScene(stage, { happyComputer, macDesktop }, sig
   const pixelRatio = Math.min(window.devicePixelRatio, MAX_PIXEL_RATIO)
   /** @type {DisplayPattern} */
   const displayPattern = { patternCell: { value: pixelRatio }, patternHeight: { value: 1 } }
-  const smilingComputer = screenTexture(await smilingComputerPicture(happyComputer))
+  const smilingComputer = screenTexture(await smilingComputerPicture(happyComputer, inDarkMode(macDesktop)))
   /** Draws the Mac Desktop's pictures, with the caret and without it, for the browser window's shape now. */
   const drawMacDesktop = async () => {
     const browserWindow = { width: stage.clientWidth, height: stage.clientHeight, pixelRatio }

@@ -713,6 +713,7 @@ module.exports = {
   swipeUp,
   expectWhollyOnScreen,
   boxOf,
+  macWindowBox,
   macDesktopPatternAreas,
   group,
   pdfText,

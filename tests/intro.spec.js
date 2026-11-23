@@ -167,6 +167,31 @@ function expectCrisp(grayShare) {
 }
 
 /**
+ * Visits the portfolio for the full Intro and expects its 3D screen, as the view landed on it, to have shown the
+ * Mac Desktop the visitor then lands on, as typing starts: alike in where its light and dark parts are, and crisp.
+ * @param {import('@playwright/test').Page} page
+ */
+async function expectScreenShowsMacDesktopItLandsOn(page) {
+  await watchIntroScene(page)
+  await visitPortfolio(page)
+
+  // The Mac Desktop the visitor lands on, as typing starts, seen without the Intro fading over it.
+  await page.waitForFunction(() => document.documentElement.dataset.introPhase === 'typing', undefined, {
+    polling: 'raf',
+    timeout: 15_000,
+  })
+  const screen = /** @type {{ width: number, height: number }} */ (page.viewportSize())
+  const landedOn = await lookAt(page, { x: 0, y: 0, ...screen }, { style: '.intro { visibility: hidden !important; }' })
+  await expectReady(page, { timeout: 15_000 })
+
+  const screenAsLanded = await lookAtScreenLanding(page)
+  expect(screenAsLanded, 'the screen alone covers the whole browser window').toBeDefined()
+  const { brightness, grayShare } = /** @type {{ brightness: number[], grayShare: number }} */ (screenAsLanded)
+  expect(similarity(brightness, landedOn.brightness), 'how alike the screen and the Mac Desktop look').toBeGreaterThan(0.7)
+  expectCrisp(grayShare)
+}
+
+/**
  * Expects the view to have landed on the 3D screen with nothing drawn on it but the Mac Desktop's 1-bit
  * pattern: crisp, and the same even gray all over, as a phone's screen shows once the smiling computer has gone.
  * @param {import('@playwright/test').Page} page
@@ -520,23 +545,7 @@ for (const layout of LAYOUTS) {
       test('shows on its screen the Mac Desktop the view then lands on: the Menu Bar and an empty Mac Window', async ({
         page,
       }) => {
-        await watchIntroScene(page)
-        await visitPortfolio(page)
-
-        // The Mac Desktop the visitor lands on, as typing starts, seen without the Intro fading over it.
-        await page.waitForFunction(() => document.documentElement.dataset.introPhase === 'typing', undefined, {
-          polling: 'raf',
-          timeout: 15_000,
-        })
-        const screen = /** @type {{ width: number, height: number }} */ (page.viewportSize())
-        const landedOn = await lookAt(page, { x: 0, y: 0, ...screen }, { style: '.intro { visibility: hidden !important; }' })
-        await expectReady(page, { timeout: 15_000 })
-
-        const screenAsLanded = await lookAtScreenLanding(page)
-        expect(screenAsLanded, 'the screen alone covers the whole browser window').toBeDefined()
-        const { brightness, grayShare } = /** @type {{ brightness: number[], grayShare: number }} */ (screenAsLanded)
-        expect(similarity(brightness, landedOn.brightness), 'how alike the screen and the Mac Desktop look').toBeGreaterThan(0.7)
-        expectCrisp(grayShare)
+        await expectScreenShowsMacDesktopItLandsOn(page)
       })
 
       test('lands square on its screen’s Menu Bar, reaching both ends of the window from the first menu to the sound control, as the live one does', async ({
@@ -592,6 +601,14 @@ for (const layout of LAYOUTS) {
     })
   })
 }
+
+test.describe('Intro for a first-time visitor in Dark Mode', () => {
+  test.use({ colorScheme: 'dark' })
+
+  test('shows on its screen the Mac Desktop the view then lands on, white on black', async ({ page }) => {
+    await expectScreenShowsMacDesktopItLandsOn(page)
+  })
+})
 
 test.describe('Intro for a first-time visitor on a narrow window drawn at one device pixel to a CSS pixel', () => {
   // A desktop browser window narrower than the 4:3 screen, still in the desktop layout, with fewer device pixels
