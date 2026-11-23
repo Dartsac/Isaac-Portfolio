@@ -15,6 +15,7 @@
     "@playwright/test": "^1.65.0",
     "@types/node": "^26.6.6",
     "@types/three": "0.187.0",
+    "darkreader": "^4.9.135",
     "pdfjs-dist": "^6.5.438",
     "typescript": "^7.0.2"
   }
