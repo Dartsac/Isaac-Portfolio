@@ -95,7 +95,10 @@ async function smilingComputerInAboutThisMac(page) {
  */
 async function smilingComputerInShortBoot(page) {
   await page.addInitScript(() => window.localStorage.setItem('isaac-dobson-portfolio:intro-seen', 'yes'))
-  await page.clock.install()
+  // The page's clock stands still from the start, so the Short Boot moves on only as far as it is run on.
+  const start = new Date('2026-01-01T09:00:00')
+  await page.clock.install({ time: start })
+  await page.clock.pauseAt(start)
   await visitPortfolio(page)
   const smilingComputer = page.getByTestId('intro-happy-computer')
   await page.clock.runFor(200)
