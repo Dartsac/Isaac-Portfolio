@@ -124,6 +124,24 @@
           <li><a class="menu-bar__title" href="#projects">Projects</a></li>
           <li><a class="menu-bar__title" href="#technologies">Technologies</a></li>
           <li><a class="menu-bar__title" href="#contact">Contact</a></li>
+          <!-- Restarts the Macintosh, playing the full Intro again. Shown once js/intro.js can play it, where
+               the Menu Bar has room: on phones, the Restart at the end of the Mac Window stands in for it. -->
+          <li class="menu-bar__restart restart-control" hidden>
+            <button class="menu-bar__restart-button" type="button" title="Restart: play the Intro again">
+              <svg
+                class="menu-bar__restart-icon"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                aria-hidden="true"
+              >
+                <path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9" />
+                <path d="M12.5 1v3.75h-3.75" stroke-linejoin="miter" />
+              </svg>
+              <span class="visually-hidden">Restart</span>
+            </button>
+          </li>
           <!-- Turns the startup chime on or off. Shown once js/sound.js can play it. -->
           <li class="menu-bar__sound" hidden>
             <button class="menu-bar__sound-toggle sound-toggle" type="button" aria-pressed="false" title="Sound">
@@ -590,6 +608,13 @@
               >
             </p>
           </section>
+          <!-- Restarts the Macintosh, playing the full Intro again, on every screen. Shown once js/intro.js
+               can play it. -->
+          <footer class="mac-window__footer restart-control" hidden>
+            <button class="mac-window__restart-button button" type="button" title="Restart: play the Intro again">
+              Restart
+            </button>
+          </footer>
         </main>
       </div>
       <!-- The CRT effects over the whole Mac Desktop: grain, scanlines, and curvature, drawn in css/style.css. -->

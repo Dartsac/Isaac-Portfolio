@@ -21,8 +21,12 @@ The classic window on the Mac Desktop where portfolio content is read and scroll
 _Avoid_: Modal, card, page
 
 **Menu Bar**:
-The persistent classic-Mac menu strip used to move between Sections, reach the Easter Egg, and turn the Startup Chime on or off.
+The persistent classic-Mac menu strip used to move between Sections, reach the Easter Egg, Restart where there is room, and turn the Startup Chime on or off.
 _Avoid_: Navbar, header
+
+**Restart**:
+The control that plays the full Intro again, as on a first visit, from the start of the portfolio. It is offered in the Menu Bar where there is room, and at the end of the Mac Window on every screen, to visitors who don't prefer reduced motion.
+_Avoid_: Replay button, rewatch
 
 **Section**:
 One of the portfolio's major content areas: About, Projects, Technologies, or Contact.

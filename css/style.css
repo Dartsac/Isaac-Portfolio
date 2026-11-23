@@ -112,6 +112,7 @@ body {
 
 .menu-bar__title:focus-visible,
 .menu-bar__easter-egg-opener:focus-visible,
+.menu-bar__restart-button:focus-visible,
 .menu-bar__sound-toggle:focus-visible {
   outline: var(--rule) solid var(--ink);
   outline-offset: calc(-2 * var(--rule));
@@ -141,11 +142,25 @@ body {
   height: 1em;
 }
 
-/* The sound control sits at the far end of the Menu Bar, where a classic menu bar kept its extras. */
-.menu-bar__sound {
+/* The Restart and sound controls sit at the far end of the Menu Bar, where a classic menu bar kept its
+/* extras. Restart shows selected (inverted) while pressed, like the first menu. */
+.menu-bar__restart,
+.menu-bar__restart[hidden] + .menu-bar__sound {
   margin-left: auto;
 }
 
+.menu-bar__restart-button:active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.menu-bar__restart-icon {
+  display: block;
+  width: 1em;
+  height: 1em;
+}
+
+.menu-bar__restart-button,
 .menu-bar__sound-toggle {
   display: block;
   padding: var(--menu-title-padding-block) min(0.5rem, 1.5vw);
@@ -278,8 +293,15 @@ body {
 
 /* The last Section is at least as tall as the Mac Window's visible content, so moving to it brings it
 /* to the top like any other Section, and reading on to the end marks it as the Section being read. */
-.section:last-child {
+.section:last-of-type {
   min-height: 100%;
+}
+
+/* The end of the Mac Window, past the last Section: the Restart offered on every screen. */
+.mac-window__footer {
+  padding: 1rem 0 2rem;
+  border-top: var(--rule) solid var(--ink);
+  text-align: center;
 }
 
 /* A Section takes focus when the Menu Bar moves a visitor to it, so keyboard and screen-reader
@@ -324,7 +346,8 @@ a[href] {
   cursor: pointer;
 }
 
-a:focus-visible {
+a:focus-visible,
+.mac-window__restart-button:focus-visible {
   outline: var(--rule) solid var(--ink);
   outline-offset: var(--rule);
 }
@@ -1137,7 +1160,7 @@ html[data-intro-phase='typing'] .mac-window__content > :not(.ready-title) {
     scroll-margin-top: calc(var(--menu-bar-height) + var(--title-bar-height));
   }
 
-  .section:last-child {
+  .section:last-of-type {
     min-height: calc(100vh - var(--menu-bar-height) - var(--title-bar-height));
     min-height: calc(100dvh - var(--menu-bar-height) - var(--title-bar-height));
   }

@@ -16,6 +16,8 @@ const {
   lookAt,
   similarity,
   menuBar,
+  restartControl,
+  pageEndRestartControl,
   boxOf,
   THREE_JS,
   watchThreeJsRequests,
@@ -968,6 +970,88 @@ for (const { name, storage } of WITHHELD_STORAGE) {
   })
 }
 
+test.describe('Restart from the Menu Bar', () => {
+  test('plays the full Intro again for a returning visitor, who gets the Short Boot as before on their next visit', async ({
+    page,
+  }) => {
+    await visitPortfolio(page)
+    await skipControl(page).click()
+    await expectReady(page)
+
+    await recordIntro(page)
+    await restartControl(page).click()
+
+    await expect(skipControl(page)).toBeVisible()
+    await expectFullIntroStarted(page)
+    await skipControl(page).click()
+    await expectReady(page)
+
+    await expectShortBoot(page)
+  })
+
+  test('can be chosen from the keyboard', async ({ page }) => {
+    await visitPortfolio(page)
+    await skipControl(page).click()
+    await expectReady(page)
+
+    await recordIntro(page)
+    await restartControl(page).focus()
+    await page.keyboard.press('Enter')
+
+    await expect(skipControl(page)).toBeVisible()
+    await expectFullIntroStarted(page)
+  })
+
+  test('plays from the start of the portfolio when the visitor is reading a Section they were linked to', async ({ page }) => {
+    await visitPortfolio(page, '#projects')
+    await expectReady(page)
+
+    await recordIntro(page)
+    await restartControl(page).click()
+
+    await expectFullIntroStarted(page)
+    expect(new URL(page.url()).hash, 'the address names no Section').toBe('')
+    await skipControl(page).click()
+    await expectReady(page)
+    await expect(menuTitle(page, 'About')).toHaveAttribute('aria-current', 'location')
+  })
+})
+
+for (const layout of LAYOUTS) {
+  test.describe(`Restart at the end of the Mac Window on ${layout.name}`, () => {
+    useLayout(layout)
+
+    test('plays the full Intro again from the end of the portfolio', async ({ page }) => {
+      await visitPortfolio(page)
+      await skipControl(page).click()
+      await expectReady(page)
+
+      await recordIntro(page)
+      await pageEndRestartControl(page).click()
+
+      await expect(skipControl(page)).toBeVisible()
+      await expectFullIntroStarted(page)
+      await skipControl(page).click()
+      await expectReady(page)
+    })
+  })
+}
+
+for (const phone of PHONES) {
+  test.describe(`Restart on ${phone.name}`, () => {
+    useLayout(phone)
+
+    test('leaves the Menu Bar to the Sections, where there is no room for it', async ({ page }) => {
+      await visitPortfolio(page)
+      await skipControl(page).click()
+      await expectReady(page)
+
+      await expect(restartControl(page)).toHaveCount(0)
+      await expect(pageEndRestartControl(page)).toBeAttached()
+    })
+  })
+}
+
 test.describe('Intro for a visitor who prefers reduced motion', () => {
   test.use({ reducedMotion: 'reduce' })
 
@@ -990,6 +1074,14 @@ test.describe('Intro for a visitor who prefers reduced motion', () => {
     await visitPortfolio(page, '', { waitUntil: 'domcontentloaded' })
 
     await expectReadyWithoutMotion(page)
+  })
+
+  test('isn’t offered, as there is no Intro to Restart', async ({ page }) => {
+    await visitPortfolio(page)
+
+    await expectReady(page)
+    await expect(restartControl(page)).toHaveCount(0)
+    await expect(pageEndRestartControl(page)).toHaveCount(0)
   })
 
   test('ends a playing Intro as soon as the visitor asks for reduced motion', async ({ page }) => {

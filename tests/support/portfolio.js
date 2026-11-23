@@ -428,6 +428,22 @@ function menuBarSoundControl(page) {
 }
 
 /**
+ * Finds the Menu Bar's Restart control, which plays the full Intro again.
+ * @param {import('@playwright/test').Page} page
+ */
+function restartControl(page) {
+  return menuBar(page).getByRole('button', { name: 'Restart', exact: true })
+}
+
+/**
+ * Finds the Restart control at the end of the Mac Window, offered on every screen, phones included.
+ * @param {import('@playwright/test').Page} page
+ */
+function pageEndRestartControl(page) {
+  return page.getByRole('main').getByRole('button', { name: 'Restart', exact: true })
+}
+
+/**
  * Moves keyboard focus to the next link or control, as a keyboard visitor would in this browser.
  * Safari on a Mac skips links on Tab unless the visitor holds Option, as its keyboard users do.
  * @param {import('@playwright/test').Page} page
@@ -691,6 +707,8 @@ module.exports = {
   easterEggMenu,
   easterEgg,
   menuBarSoundControl,
+  restartControl,
+  pageEndRestartControl,
   tabToNext,
   swipeUp,
   expectWhollyOnScreen,

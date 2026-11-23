@@ -26,6 +26,15 @@ function hasSeenIntro() {
   }
 }
 
+/** Forgets that this visitor has seen the full Intro, so the next visit plays it as a first one does. */
+function forgetIntroSeen() {
+  try {
+    window.localStorage.removeItem(INTRO_SEEN_KEY)
+  } catch {
+    // Storage is blocked: every visit is treated as a first one already.
+  }
+}
+
 /** Remembers that this visitor has seen the full Intro, where the browser lets it. */
 function rememberIntroSeen() {
   try {
@@ -289,6 +298,38 @@ async function playFullIntro() {
   )
   finishIntro()
 }
+
+/**
+ * Restarts the Macintosh: the portfolio opens again as on a first visit, at its start rather than at any
+ * Section linked to, so the full Intro plays. Playing it out, or skipping it, remembers it as seen again.
+ */
+function restart() {
+  forgetIntroSeen()
+  window.location.replace(window.location.pathname + window.location.search)
+}
+
+/**
+ * Windows too narrow for the Menu Bar to hold Restart beside the Sections, such as a phone's. There, the
+ * Restart at the end of the Mac Window stands in for it.
+ */
+const menuBarTooNarrowForRestart = matchMedia('(max-width: 30rem)')
+
+// Restart is offered only once this script can play the Intro, and only to visitors who don't prefer
+// reduced motion, who never see an Intro. Each offer is hidden with the hidden attribute, which
+// js/intro-scene.js follows as it draws the Menu Bar on the 3D Macintosh's screen.
+document.addEventListener('DOMContentLoaded', () => {
+  const restartControls = /** @type {HTMLElement[]} */ ([...document.querySelectorAll('.restart-control')])
+  for (const control of restartControls) control.querySelector('button')?.addEventListener('click', restart)
+  const offerRestart = () => {
+    for (const control of restartControls) {
+      const noRoom = control.matches('.menu-bar__restart') && menuBarTooNarrowForRestart.matches
+      control.hidden = reducedMotion.matches || noRoom
+    }
+  }
+  reducedMotion.addEventListener('change', offerRestart)
+  menuBarTooNarrowForRestart.addEventListener('change', offerRestart)
+  offerRestart()
+})
 
 document.addEventListener('DOMContentLoaded', () => {
   if (!root.dataset.intro) return
