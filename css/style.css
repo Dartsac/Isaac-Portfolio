@@ -7,6 +7,8 @@
   --ink: #000;
   --paper: #fff;
   color-scheme: light;
+  /* How the CRT Effects' grain is drawn: dark specks, which show on white paper. */
+  --grain-filter: none;
   /* Black whatever the ink: the dark room the Intro's Macintosh powers on in, and its screen's glass. */
   --darkness: #000;
   --rule: 2px;
@@ -32,6 +34,7 @@
   :root:not([data-dark-mode='off']) {
     --ink: #fff;
     --paper: #000;
+    --grain-filter: invert(1);
     color-scheme: dark;
   }
 }
@@ -39,6 +42,8 @@
 :root[data-dark-mode='on'] {
   --ink: #fff;
   --paper: #000;
+  /* Light specks, which show on black paper as plainly as dark ones on white. */
+  --grain-filter: invert(1);
   color-scheme: dark;
 }
 
@@ -1112,6 +1117,7 @@ html[data-intro-phase='typing'] .mac-window__content > :not(.ready-title) {
   position: absolute;
   inset: -10%;
   background: url('../img/grain.png') 0 0 / 400px 400px;
+  filter: var(--grain-filter);
   opacity: 0.35;
   animation: crt-grain 0.8s steps(1) infinite;
 }

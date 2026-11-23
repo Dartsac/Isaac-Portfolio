@@ -75,6 +75,28 @@ async function blankScreenArea(page) {
 }
 
 /**
+ * How strongly the grain shows over a blank stretch of the Mac Window, seen without the scanlines and dimmed
+ * edges: how far its pixels are, on average, from the plain paper there, in levels from 0 to 255.
+ * @param {import('@playwright/test').Page} page
+ */
+async function grainStrength(page) {
+  const clip = await blankScreenArea(page)
+  const screenshot = await page.screenshot({ clip, style: '.crt { background: none !important; box-shadow: none !important; }' })
+  return page.evaluate(async (base64) => {
+    const bytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0))
+    const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/png' }))
+    const { width, height } = bitmap
+    const context = /** @type {OffscreenCanvasRenderingContext2D} */ (new OffscreenCanvas(width, height).getContext('2d'))
+    context.drawImage(bitmap, 0, 0)
+    const pixels = context.getImageData(0, 0, width, height).data
+    const paper = getComputedStyle(/** @type {Element} */ (document.querySelector('.mac-window'))).backgroundColor === 'rgb(0, 0, 0)' ? 0 : 255
+    let total = 0
+    for (let i = 0; i < pixels.length; i += 4) total += Math.abs((pixels[i] + pixels[i + 1] + pixels[i + 2]) / 3 - paper)
+    return total / (pixels.length / 4)
+  }, screenshot.toString('base64'))
+}
+
+/**
  * Takes two looks at an area of the screen a moment apart, and says how far apart they are.
  * @param {import('@playwright/test').Page} page
  * @param {ScreenArea} clip
@@ -133,6 +155,19 @@ for (const layout of LAYOUTS) {
     })
   })
 }
+
+test.describe('CRT effects in Dark Mode', () => {
+  test('show the grain on the black screen as plainly as on the white one', async ({ page }) => {
+    await page.emulateMedia({ colorScheme: 'light' })
+    await openPortfolio(page)
+    const onWhite = await grainStrength(page)
+
+    await page.emulateMedia({ colorScheme: 'dark' })
+    const onBlack = await grainStrength(page)
+
+    expect(onBlack, 'how strongly the grain shows on black, against on white').toBeGreaterThan(onWhite * 0.85)
+  })
+})
 
 /**
  * How far an area of the screen is from how it would look with no CRT effects over it.
